@@ -5,12 +5,48 @@
 ---
 
 ## 📋 Week 1 Submission Info
+
 - **Student Name:** Verdhan Yash
 - **Segment:** Foundations of Applied Machine Learning
 - **Problem Statement Code:** I2 (Document Q&A — RAG over a Focused Corpus)
 - **Status:** Milestone 0 (Foundation) Completed & Deployed locally
 - **GitHub Repository:** [verdhanyash/AtlasIQ](https://github.com/verdhanyash/AtlasIQ)
-- **Initial Design Doc:** [docs/design_doc.md](file:///c:/Users/yashv/Desktop/AtlasIQ/docs/design_doc.md)
+- **Initial Design Doc:** [docs/design_doc.md](docs/design_doc.md)
+
+---
+
+## 🔍 Week 1 Submission Checklist
+
+- [x] **Repo created and public:** [verdhanyash/AtlasIQ](https://github.com/verdhanyash/AtlasIQ)
+- [x] **README.md configured** with project name, tagline, metadata, and learnings.
+- [x] **Initial Design Doc (1 page):** Embedded/linked as [docs/design_doc.md](docs/design_doc.md).
+- [x] **Tech stack table:** Completed with `Component | Choice | Why (one line)` (see below).
+- [x] **Data layer working:** Verified via postgres/qdrant startup logs and health status checks (see below).
+- [x] **At least 5 GitHub commits** on the main branch.
+- [x] **A "What I learned" note** (3-5 bullet points) included in README.
+
+---
+
+## 📈 Week 1 Status One-Pager
+
+### What's Done
+- Scaffolded modular repository structure, configured Pydantic settings loading from `configs/default.yaml` with environment variable overrides.
+- Implemented robust structured JSON logging, custom domain exception handlers, and fail-fast startup checks.
+- Implemented async PostgreSQL client and database schema initialization (`schema.sql`).
+- Implemented async Qdrant client with automatic collection creation (768-dim, cosine distance).
+- Created multi-stage Docker environment running FastAPI, PostgreSQL, and Qdrant.
+- Verified system status with a functional `/health` check endpoint.
+
+### What's Stuck
+- None. All Milestone 0 foundation tasks are complete and running successfully.
+
+### 3 Goals for Next Week
+1. Build `validator.py` and `parser.py` (IBM Docling integration) to convert raw files into structured Markdown.
+2. Implement hash-based `change_detector.py` for incremental indexing to prevent duplicate processing.
+3. Build the watchdog-based `watcher.py` folder monitor and orchestrate the full ingestion pipeline.
+
+### One thing I'd like help from my mentor on
+- Best practices for chunking strategies (handling tables and headings in Docling) and optimizing inference batch sizes when running sentence-transformers locally.
 
 ---
 
