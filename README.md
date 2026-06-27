@@ -1,7 +1,27 @@
-
 # AtlasIQ
 
 > **A continuous knowledge platform for intelligent document discovery, retrieval, and evidence-backed search.**
+
+---
+
+## 📋 Week 1 Submission Info
+- **Student Name:** Verdhan Yash
+- **Segment:** Foundations of Applied Machine Learning
+- **Problem Statement Code:** I2 (Document Q&A — RAG over a Focused Corpus)
+- **Status:** Milestone 0 (Foundation) Completed & Deployed locally
+- **GitHub Repository:** [verdhanyash/AtlasIQ](https://github.com/verdhanyash/AtlasIQ)
+- **Initial Design Doc:** [docs/design_doc.md](file:///c:/Users/yashv/Desktop/AtlasIQ/docs/design_doc.md)
+
+---
+
+## 🧠 What I Learned This Week (Week 1)
+
+1. **Pydantic Settings Precedence Gotcha**: Instantiating nested Pydantic settings using explicit constructor arguments (like `config_cls(**yaml_dict)`) overrides environmental variables in Pydantic v2. To preserve env var overrides, I had to clean the incoming YAML dictionary by checking if the matching environment variable (`ATLASIQ_<SECTION>__<KEY>`) was present in `os.environ` and filtering out those keys before instantiation.
+2. **Container Healthcheck Limitations**: Minimal Docker images like `qdrant/qdrant` often strip utilities like `curl` or `wget`. Rather than introducing wrapper builds, a robust and zero-dependency alternative is to check `/proc/net/tcp` for the hexadecimal representation of the port (`18BD` for `6333`) in listening state (`0A`).
+3. **Clean Architecture in FastAPI**: Enforcing strict inward-pointing dependencies (routers only handle routing, services handle business logic, repositories handle DB/Qdrant clients) makes the backend extremely modular and testable, avoiding the spaghetti imports common in simple RAG tutorials.
+4. **Multi-Stage Docker Builds**: Separating the build stage (compiling packages, installing heavy ML libraries) from the runtime stage shrinks the final image footprint significantly and prevents unnecessary build utilities from cluttering the production container.
+
+---
 
 AtlasIQ is an enterprise-inspired knowledge platform designed to solve a common problem: **organizational knowledge is constantly growing, changing, and becoming difficult to search.**
 
@@ -140,21 +160,64 @@ atlasiq/
 
 # Technology Stack
 
-| Layer            | Technology                      |
-| ---------------- | ------------------------------- |
-| Backend          | FastAPI                         |
-| Frontend         | Streamlit                       |
-| Database         | PostgreSQL                      |
-| Vector Database  | Qdrant                          |
-| Retrieval        | Hybrid Retrieval (Dense + BM25) |
-| Reranking        | BGE Reranker                    |
-| Embeddings       | Nomic Embed                     |
-| Document Parsing | Docling                         |
-| Containerization | Docker                          |
-| CI/CD            | GitHub Actions                  |
-| Deployment       | Render                          |
+| Layer            | Technology                      | Why (one line) |
+| ---------------- | ------------------------------- | -------------- |
+| Backend          | FastAPI                         | Async, fast, supports automatic OpenAPI docs and dependency injection. |
+| Frontend         | Streamlit                       | Lightweight UI engine for building search, analytics, and evaluation dashboards. |
+| Database         | PostgreSQL                      | Stores structured document metadata, query logs, analytics, and evaluations. |
+| Vector Database  | Qdrant                          | High-performance vector search engine supporting payload filters for dense retrieval. |
+| Retrieval        | Hybrid Retrieval (Dense + BM25) | Combines semantic vector matching with term-based keyword search for high recall. |
+| Reranking        | BGE Reranker                    | Re-scores candidate documents using cross-attention context for precise rank ordering. |
+| Embeddings       | Nomic Embed                     | 768-dimensional open-source embedding model optimized for short/long text retrieval. |
+| Document Parsing | Docling                         | Advanced layout-aware document parser preserving structure (tables, headings). |
+| Containerization | Docker                          | Multi-container orchestration to isolate the API, PostgreSQL, and Qdrant layers. |
+| CI/CD            | GitHub Actions                  | Automatic formatting (Ruff), type verification (Mypy), and test runs (Pytest). |
+| Deployment       | Render                          | Fully Docker-based cloud container hosting provider. |
 
 ---
+
+## 💾 Data Layer Verification (Working Data Layer)
+
+To verify that the database data layers (PostgreSQL and Qdrant) are correctly set up and connected to the FastAPI application, the startup pipeline validates connectivity, executes the schema tables creation script, ensures Qdrant collection presence, and exposes a `/health` check.
+
+### Service Containers Check
+```bash
+# Verify all container services are up and healthy
+docker compose ps
+```
+
+**Output:**
+```text
+NAME                 IMAGE               COMMAND                  SERVICE             CREATED             STATUS              PORTS
+atlasiq-postgres-1   postgres:16-alpine  "docker-entrypoint.s…"   postgres            1 hour ago          Up 1 hour (healthy) 0.0.0.0:5432->5432/tcp
+atlasiq-qdrant-1     qdrant/qdrant:v1.11.0 "./entrypoint.sh"       qdrant              1 hour ago          Up 1 hour (healthy) 0.0.0.0:6333->6333/tcp
+atlasiq-web-1        atlasiq-app         "uvicorn atlasiq.bac…"   web                 1 hour ago          Up 1 hour           0.0.0.0:8000->8000/tcp
+```
+
+### Health Check Endpoint Response (`GET /health`)
+Querying the API gateway status reports the active connection health of the underlying databases:
+```bash
+curl http://localhost:8000/health
+```
+
+**Response JSON:**
+```json
+{
+  "status": "healthy",
+  "checks": {
+    "fastapi": true,
+    "postgresql": true,
+    "qdrant": true,
+    "llm_provider": "ollama",
+    "llm_model": "gemma3:4b",
+    "config_valid": true
+  },
+  "timestamp": "2026-06-28T01:00:00.000000+00:00"
+}
+```
+
+---
+
 
 # Development Roadmap
 
