@@ -1,0 +1,76 @@
+# AtlasIQ Docker Compose
+# Starts all required services: FastAPI backend, PostgreSQL, and Qdrant.
+#
+# Usage:
+#   docker-compose up        — start all services
+#   docker-compose up -d     — start in background
+#   docker-compose down -v   — stop and remove volumes
+#
+# The backend will fail fast if PostgreSQL or Qdrant is unreachable.
+
+services:
+  # ── FastAPI Backend ──────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: atlasiq-app
+    ports:
+      - "8000:8000"
+    environment:
+      - ATLASIQ_DATABASE__HOST=postgres
+      - ATLASIQ_DATABASE__PORT=5432
+      - ATLASIQ_DATABASE__NAME=atlasiq
+      - ATLASIQ_DATABASE__USER=atlasiq
+      - ATLASIQ_DATABASE__PASSWORD=atlasiq
+      - ATLASIQ_QDRANT__HOST=qdrant
+      - ATLASIQ_QDRANT__PORT=6333
+      - ATLASIQ_LLM__PROVIDER=ollama
+      - ATLASIQ_OLLAMA__BASE_URL=http://host.docker.internal:11434
+    volumes:
+      - ./watched_documents:/app/watched_documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: atlasiq-postgres
+    environment:
+      POSTGRES_DB: atlasiq
+      POSTGRES_USER: atlasiq
+      POSTGRES_PASSWORD: atlasiq
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlasiq -d atlasiq"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Qdrant Vector Database ──────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: atlasiq-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q ':18BD' /proc/net/tcp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  qdrant_data:

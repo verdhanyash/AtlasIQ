@@ -1,0 +1,103 @@
+# AtlasIQ Configuration
+# All values can be overridden via environment variables prefixed with ATLASIQ_
+# Example: ATLASIQ_SERVER__HOST overrides server.host
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  reload: false
+  log_level: "info"
+
+# PostgreSQL connection
+database:
+  host: "localhost"
+  port: 5432
+  name: "atlasiq"
+  user: "atlasiq"
+  password: "atlasiq"
+  pool_min_size: 2
+  pool_max_size: 10
+
+# Qdrant vector database
+qdrant:
+  host: "localhost"
+  port: 6333
+  collection_name: "atlasiq_chunks"
+  vector_size: 768
+
+# Document ingestion
+ingestion:
+  watched_folder: "./watched_documents"
+  supported_formats:
+    - ".pdf"
+    - ".docx"
+    - ".md"
+    - ".txt"
+  max_file_size_mb: 50
+
+# Chunking
+chunking:
+  chunk_size: 512
+  chunk_overlap: 50
+  separators:
+    - "\n\n"
+    - "\n"
+    - ". "
+    - " "
+
+# Embedding model
+embedding:
+  model_name: "nomic-ai/nomic-embed-text-v1.5"
+  batch_size: 32
+  device: "cpu"
+
+# Retrieval
+retrieval:
+  dense_top_k: 20
+  bm25_top_k: 20
+  hybrid_top_k: 20
+  rerank_top_k: 5
+  rrf_k: 60
+
+# Reranker
+reranker:
+  model_name: "BAAI/bge-reranker-v2-m3"
+  device: "cpu"
+
+# LLM provider configuration
+llm:
+  provider: "ollama"
+  model: "gemma3:4b"
+  temperature: 0.3
+  max_tokens: 1024
+  timeout_seconds: 60
+
+# Provider-specific settings
+ollama:
+  base_url: "http://localhost:11434"
+
+nvidia:
+  base_url: "https://integrate.api.nvidia.com/v1"
+  api_key: ""
+
+openai:
+  base_url: "https://api.openai.com/v1"
+  api_key: ""
+
+# Prompt templates
+prompts:
+  directory: "prompts"
+  qa_template: "qa_prompt.txt"
+  citation_template: "citation_prompt.txt"
+  system_template: "system_prompt.txt"
+
+# Query cache
+cache:
+  enabled: true
+  max_size: 100
+  ttl_seconds: 3600
+
+# Logging
+logging:
+  level: "INFO"
+  format: "json"

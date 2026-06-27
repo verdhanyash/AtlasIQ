@@ -1,0 +1,17 @@
+Extract citations from the following answer. For each factual claim, identify:
+
+1. The source document name
+2. The page number (if available)
+3. The relevant quote from the context that supports the claim
+
+Answer:
+{answer}
+
+Context used:
+{context}
+
+Return citations in this format:
+- Claim: <the factual claim>
+  Source: <document name>
+  Page: <page number or "N/A">
+  Quote: <relevant supporting text>

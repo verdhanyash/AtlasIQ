@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# AtlasIQ custom ignores
+watched_documents/
+docs.zip

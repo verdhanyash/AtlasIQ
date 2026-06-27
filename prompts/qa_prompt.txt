@@ -1,0 +1,15 @@
+Answer the following question based on the provided context.
+
+Context:
+{context}
+
+Question: {question}
+
+Instructions:
+- Answer using ONLY the information in the context above.
+- If the context does not contain enough information, say "I don't have enough information to answer this question based on the available documents."
+- Cite the source document and page number for each claim.
+- Format citations as [Source: document_name, Page: page_number].
+- Be concise and direct.
+
+Answer:
