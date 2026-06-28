@@ -6,7 +6,7 @@
 
 ## 📋 Week 1 Submission Info
 
-- **Student Name:** Verdhan Yash
+- **Student Name:** Yash Verdhan Parihar
 - **Segment:** Foundations of Applied Machine Learning
 - **Problem Statement Code:** I2 (Document Q&A — RAG over a Focused Corpus)
 - **Status:** Milestone 0 (Foundation) Completed & Deployed locally
