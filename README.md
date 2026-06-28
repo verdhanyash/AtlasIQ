@@ -253,9 +253,82 @@ curl http://localhost:8000/health
 ```
 
 ---
+# 🚧 Development Progress
+
+| Milestone                                 | Status         |
+| ----------------------------------------- | -------------- |
+| Milestone 0 — Foundation                  | ✅ Completed    |
+| Milestone 1 — Document Ingestion Pipeline | 🚧 In Progress |
+| Milestone 2 — Retrieval Pipeline          | ⏳ Planned      |
+| Milestone 3 — Generation Pipeline         | ⏳ Planned      |
+| Milestone 4 — Evaluation & Analytics      | ⏳ Planned      |
+
+---
+
+## ✅ Milestone 0 — Foundation
+
+Completed infrastructure includes:
+
+* Clean modular project architecture
+* FastAPI backend
+* Configuration management (YAML + Environment Variables)
+* Async PostgreSQL client
+* Qdrant vector database integration
+* Docker & Docker Compose
+* Health check API
+* Structured logging
+* Database initialization
+* CI/CD foundation
+
+---
+
+## 🚧 Milestone 1 — Document Ingestion Pipeline
+
+### Completed
+
+* ✅ Document Validator
+* ✅ Document Parser (IBM Docling Integration)
+
+### Remaining
+
+* ⏳ Metadata Extraction
+* ⏳ Change Detection
+* ⏳ Semantic Chunking
+* ⏳ Embedding Generation
+* ⏳ Persistence Layer
+* ⏳ Ingestion Pipeline Orchestration
+* ⏳ Folder Watcher
+* ⏳ Ingestion REST API
+
+## Latest Implementation
+
+### Step 2 — Document Parser
+
+Implemented a modular document parsing service responsible for converting supported document formats into structured Markdown/text.
+
+**Highlights**
+
+* IBM Docling integration for PDF and DOCX parsing
+* Native handling for Markdown and TXT files
+* Preserves document structure (headings, paragraphs, tables where supported)
+* Clean parser service following the project's layered architecture
+* Comprehensive unit tests
+* No metadata extraction, chunking, or embedding logic (single responsibility)
+
+**Engineering Principles**
+
+* Dependency Injection
+* Separation of Concerns
+* Configurable Architecture
+* Production-oriented modular design
+
+**Status**
+
+✅ Completed and tested.
 
 
 # Development Roadmap
+
 
 ## Version 1 — Internship Release
 
