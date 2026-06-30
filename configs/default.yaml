@@ -27,6 +27,7 @@ qdrant:
 
 # Document ingestion
 ingestion:
+  storage_dir: "./document_storage"
   watched_folder: "./watched_documents"
   supported_formats:
     - ".pdf"

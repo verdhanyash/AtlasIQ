@@ -28,6 +28,7 @@ services:
       - ATLASIQ_LLM__PROVIDER=ollama
       - ATLASIQ_OLLAMA__BASE_URL=http://host.docker.internal:11434
     volumes:
+      - ./document_storage:/app/document_storage
       - ./watched_documents:/app/watched_documents
     depends_on:
       postgres:

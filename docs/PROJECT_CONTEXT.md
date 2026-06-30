@@ -85,13 +85,27 @@ Both communicate through shared storage.
 
 # Ingestion Pipeline
 
-Pipeline:
+Documents enter the system through two sources:
+
+**Source A — Upload API (Primary):**
+
+REST endpoint for production deployments.
+
+**Source B — Folder Watcher (Optional):**
+
+Directory monitor for local/enterprise use.
+
+Both invoke the same shared pipeline:
 
 Document
 
 ↓
 
 Validation
+
+↓
+
+Change Detection
 
 ↓
 

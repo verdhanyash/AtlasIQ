@@ -43,7 +43,7 @@
 ### 3 Goals for Next Week
 1. Build `validator.py` and `parser.py` (IBM Docling integration) to convert raw files into structured Markdown.
 2. Implement hash-based `change_detector.py` for incremental indexing to prevent duplicate processing.
-3. Build the watchdog-based `watcher.py` folder monitor and orchestrate the full ingestion pipeline.
+3. Build the Upload API (`POST /ingest/upload`) as the primary ingestion entry point and orchestrate the full ingestion pipeline. Folder watcher is optional for local/enterprise use.
 
 ### One thing I'd like help from my mentor on
 - Best practices for chunking strategies (handling tables and headings in Docling) and optimizing inference batch sizes when running sentence-transformers locally.
@@ -130,40 +130,52 @@ The goal is to build a platform that can evolve into an enterprise knowledge sys
                                   │           User             │
                                   └─────────────┬──────────────┘
                                                 │
-                                     Natural Language Query
+                                       Natural Language Query
+                                          or Document Upload
                                                 │
                                                 ▼
-                          ┌─────────────────────────────────────┐
-                          │      Streamlit User Interface       │
-                          │ Upload • Search • Analytics • Eval  │
-                          └─────────────────┬───────────────────┘
-                                            │
-                                            ▼
-                           ┌──────────────────────────────────┐
-                           │         FastAPI Backend          │
-                           └───────┬───────────┬──────────────┘
-                                   │           │
-                    ┌──────────────┘           └──────────────┐
-                    ▼                                         ▼
-          Ingestion Pipeline                        Query Processing
-                    │                                         │
-      ┌─────────────┴──────────────┐               ┌──────────┴──────────┐
-      │                            │               │                     │
-      ▼                            ▼               ▼                     ▼
-Document Parser             Metadata Engine   Hybrid Retrieval      Query Logger
-      │                            │        (Dense + BM25)              │
-      ▼                            │               │                    ▼
-Chunking Engine                    │               ▼              PostgreSQL
-      │                            │          Reranker
-      ▼                            │               │
-Embedding Model                    │               ▼
-      │                            └────────► Prompt Builder
-      ▼                                            │
-   Qdrant Vector DB                                ▼
-                                         LLM Provider Interface
-                                                   │
-                                                   ▼
-                                   Answer + Citations + Confidence
+                           ┌─────────────────────────────────────┐
+                           │      Streamlit User Interface       │
+                           │ Upload • Search • Analytics • Eval  │
+                           └─────────────────┬───────────────────┘
+                                             │
+                                             ▼
+                            ┌──────────────────────────────────┐
+                            │         FastAPI Backend          │
+                            └───────┬───────────┬──────────────┘
+                                    │           │
+                     ┌──────────────┘           └──────────────┐
+                     ▼                                         ▼
+      Ingestion Sources                              Query Processing
+             │                                               │
+    ┌────────┴────────┐                           ┌──────────┴──────────┐
+    │                 │                           │                     │
+    ▼                 ▼                           ▼                     ▼
+Upload API     Folder Watcher             Hybrid Retrieval        Query Logger
+(Primary)      (Optional)                 (Dense + BM25)                │
+    │                 │                           │                    ▼
+    └────────┬────────┘                           ▼              PostgreSQL
+             │                               Reranker            (Analytics)
+             ▼                                    │
+   Shared Ingestion Pipeline                      ▼
+             │                             Prompt Builder
+    ┌────────┴────────────┐                       │
+    │                     │                       ▼
+    ▼                     ▼              LLM Provider Interface
+Validator          Change Detector                │
+    │                     │                       ▼
+    ▼                     │        Answer + Citations + Confidence
+  Parser                  │
+    │                     │
+    ▼                     │
+Chunking Engine           │
+    │                     │
+    ▼                     │
+Embedding Model           │
+    │                     │
+    ▼                     ▼
+  Qdrant            Metadata Engine
+  Vector DB         (SHA-256 Hash → PostgreSQL)
 ```
 
 ---

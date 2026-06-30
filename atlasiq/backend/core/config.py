@@ -95,6 +95,7 @@ class IngestionConfig(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="ATLASIQ_INGESTION__")
 
+    storage_dir: str = "./document_storage"
     watched_folder: str = "./watched_documents"
     supported_formats: list[str] = Field(
         default=[".pdf", ".docx", ".md", ".txt"]

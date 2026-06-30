@@ -39,8 +39,8 @@ COPY atlasiq/ atlasiq/
 COPY configs/ configs/
 COPY prompts/ prompts/
 
-# Create watched documents directory
-RUN mkdir -p watched_documents
+# Create document storage and watched directories
+RUN mkdir -p document_storage watched_documents
 
 # Expose FastAPI port
 EXPOSE 8000

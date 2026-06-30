@@ -75,13 +75,23 @@ def validate_prompt_templates(settings: Settings) -> None:
 def validate_directories(settings: Settings) -> None:
     """Ensure required directories exist, creating them if necessary.
 
+    Creates the primary document storage directory (for API uploads) and
+    the optional watched folder (for the directory watcher ingestion source).
+
     Args:
         settings: The application settings containing directory paths.
     """
+    # Primary storage directory — destination for uploaded documents
+    storage_dir = Path(settings.ingestion.storage_dir)
+    if not storage_dir.is_absolute():
+        storage_dir = PROJECT_ROOT / storage_dir
+    storage_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Document storage directory ready: %s", storage_dir)
+
+    # Optional watched folder — for directory watcher ingestion source
     watched_folder = Path(settings.ingestion.watched_folder)
     if not watched_folder.is_absolute():
         watched_folder = PROJECT_ROOT / watched_folder
-
     watched_folder.mkdir(parents=True, exist_ok=True)
     logger.info("Watched folder ready: %s", watched_folder)
 
