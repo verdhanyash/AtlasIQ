@@ -38,6 +38,10 @@ class DocumentParsingError(AtlasIQError):
     """Raised when a document cannot be parsed into text."""
 
 
+class ChunkingError(AtlasIQError):
+    """Raised when text chunking fails."""
+
+
 class DocumentNotFoundError(AtlasIQError):
     """Raised when a requested document does not exist."""
 
