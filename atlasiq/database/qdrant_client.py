@@ -8,12 +8,11 @@ the qdrant_client library directly.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from qdrant_client import QdrantClient as _QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import Distance, PointStruct, VectorParams
-
-from atlasiq.backend.core.exceptions import DatabaseConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +70,7 @@ class QdrantVectorClient:
         self,
         ids: list[str],
         vectors: list[list[float]],
-        payloads: list[dict] | None = None,
+        payloads: list[dict[str, Any]] | None = None,
     ) -> None:
         """Insert or update vectors in the collection.
 
@@ -102,7 +101,7 @@ class QdrantVectorClient:
         query_vector: list[float],
         top_k: int = 20,
         score_threshold: float | None = None,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """Search for similar vectors using cosine similarity.
 
         Args:
@@ -113,12 +112,12 @@ class QdrantVectorClient:
         Returns:
             List of result dicts with keys: id, score, payload.
         """
-        results = self.client.search(
+        results = self.client.query_points(
             collection_name=self.collection_name,
-            query_vector=query_vector,
+            query=query_vector,
             limit=top_k,
             score_threshold=score_threshold,
-        )
+        ).points
 
         return [
             {

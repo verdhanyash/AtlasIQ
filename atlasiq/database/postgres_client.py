@@ -10,8 +10,12 @@ import logging
 from pathlib import Path
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from atlasiq.backend.core.exceptions import DatabaseConnectionError
 
@@ -42,9 +46,8 @@ class PostgresClient:
             max_overflow=pool_max_size - pool_min_size,
             echo=False,
         )
-        self.session_factory = sessionmaker(
+        self.session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
             self.engine,
-            class_=AsyncSession,
             expire_on_commit=False,
         )
         logger.info("PostgreSQL client initialized: pool_min=%d, pool_max=%d", pool_min_size, pool_max_size)

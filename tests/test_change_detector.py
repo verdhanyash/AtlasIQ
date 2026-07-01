@@ -8,12 +8,15 @@ new, modified, and unchanged files.
 from __future__ import annotations
 
 import hashlib
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from atlasiq.backend.core.exceptions import DocumentNotFoundError
 from atlasiq.ingestion.change_detector import ChangeDetector, ChangeStatus
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture

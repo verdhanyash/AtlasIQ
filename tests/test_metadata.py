@@ -7,14 +7,13 @@ the correct exception for missing files.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from atlasiq.backend.core.exceptions import DocumentNotFoundError
 from atlasiq.ingestion.metadata import DocumentMetadata, extract_metadata
-
 
 # ── Successful extraction ────────────────────────────────────────────────────
 
@@ -63,9 +62,9 @@ class TestExtractMetadata:
         """ingested_at should be a recent UTC timestamp."""
         file = tmp_path / "doc.md"
         file.write_text("content", encoding="utf-8")
-        before = datetime.now(timezone.utc)
+        before = datetime.now(UTC)
         meta = extract_metadata(file)
-        after = datetime.now(timezone.utc)
+        after = datetime.now(UTC)
         assert before <= meta.ingested_at <= after
 
     def test_txt_extension(self, tmp_path: Path) -> None:
@@ -99,7 +98,7 @@ class TestDocumentMetadataDataclass:
 
     def test_equality_same_values(self) -> None:
         """Two metadata instances with identical values should be equal."""
-        ts = datetime.now(timezone.utc)
+        ts = datetime.now(UTC)
         m1 = DocumentMetadata("a.txt", "/path/a.txt", ".txt", 100, ts)
         m2 = DocumentMetadata("a.txt", "/path/a.txt", ".txt", 100, ts)
         assert m1 == m2

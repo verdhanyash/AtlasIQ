@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from atlasiq.backend.core.exceptions import DocumentNotFoundError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +62,7 @@ def extract_metadata(file_path: Path) -> DocumentMetadata:
         file_path=str(file_path.resolve()),
         file_extension=file_path.suffix.lower(),
         file_size_bytes=stat.st_size,
-        ingested_at=datetime.now(timezone.utc),
+        ingested_at=datetime.now(UTC),
     )
 
     logger.info(

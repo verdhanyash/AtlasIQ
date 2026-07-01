@@ -16,7 +16,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from atlasiq.backend.api.routes_health import router as health_router
-from atlasiq.backend.core.config import Settings
 from atlasiq.backend.core.dependencies import (
     get_postgres_client,
     get_qdrant_client,

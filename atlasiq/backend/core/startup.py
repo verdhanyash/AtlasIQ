@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from atlasiq.backend.core.config import PROJECT_ROOT, Settings
 from atlasiq.backend.core.exceptions import ConfigurationError, StartupError
-from atlasiq.database.postgres_client import PostgresClient
-from atlasiq.database.qdrant_client import QdrantVectorClient
+
+if TYPE_CHECKING:
+    from atlasiq.database.postgres_client import PostgresClient
+    from atlasiq.database.qdrant_client import QdrantVectorClient
 
 logger = logging.getLogger(__name__)
 

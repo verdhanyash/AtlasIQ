@@ -8,10 +8,14 @@ and size constraints using values from IngestionConfig.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from atlasiq.backend.core.config import IngestionConfig
 from atlasiq.backend.core.exceptions import DocumentValidationError
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from atlasiq.backend.core.config import IngestionConfig
 
 logger = logging.getLogger(__name__)
 

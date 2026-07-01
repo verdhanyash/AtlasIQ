@@ -8,6 +8,7 @@ model loading. All tests use mocked models — no actual model downloads or GPU.
 from __future__ import annotations
 
 import sys
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,13 +16,11 @@ import pytest
 from atlasiq.backend.core.config import EmbeddingConfig
 from atlasiq.backend.core.exceptions import EmbeddingError
 
-
 # Mock sentence_transformers at module level before importing embedder
 _mock_sentence_transformers = MagicMock()
 sys.modules["sentence_transformers"] = _mock_sentence_transformers
 
 from atlasiq.ingestion.embedder import DocumentEmbedder  # noqa: E402
-
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -49,7 +48,7 @@ def mock_model() -> MagicMock:
     model.get_sentence_embedding_dimension.return_value = 768
 
     # Mock encode to return numpy-like arrays (lists that have .tolist())
-    def mock_encode(texts: str | list[str], **kwargs: dict) -> MagicMock:
+    def mock_encode(texts: str | list[str], **kwargs: object) -> Any:
         if isinstance(texts, str):
             # Single text → single embedding
             embedding = MagicMock()
@@ -117,7 +116,7 @@ class TestDimension:
         """Accessing dimension should trigger lazy model loading."""
         # Mock the SentenceTransformer constructor in the mocked module
         _mock_sentence_transformers.SentenceTransformer = MagicMock(return_value=mock_model)
-        
+
         embedder = DocumentEmbedder(default_config)
         assert embedder._model is None  # Not loaded yet
         dim = embedder.dimension
@@ -130,7 +129,8 @@ class TestDimension:
         dim2 = embedder_with_mock.dimension
         assert dim1 == dim2 == 768
         # get_sentence_embedding_dimension should be called only once
-        assert embedder_with_mock._model.get_sentence_embedding_dimension.call_count == 0  # Already cached
+        model = cast("MagicMock", embedder_with_mock._model)
+        assert model.get_sentence_embedding_dimension.call_count == 0  # Already cached
 
     def test_dimension_invalid_raises(
         self, default_config: EmbeddingConfig
@@ -139,7 +139,7 @@ class TestDimension:
         bad_model = MagicMock()
         bad_model.get_sentence_embedding_dimension.return_value = 0
         _mock_sentence_transformers.SentenceTransformer = MagicMock(return_value=bad_model)
-        
+
         embedder = DocumentEmbedder(default_config)
         with pytest.raises(EmbeddingError, match="Invalid embedding dimension"):
             _ = embedder.dimension
@@ -149,7 +149,7 @@ class TestDimension:
         bad_model = MagicMock()
         bad_model.get_sentence_embedding_dimension.return_value = None
         _mock_sentence_transformers.SentenceTransformer = MagicMock(return_value=bad_model)
-        
+
         embedder = DocumentEmbedder(default_config)
         with pytest.raises(EmbeddingError, match="Invalid embedding dimension"):
             _ = embedder.dimension
@@ -183,7 +183,7 @@ class TestEmbed:
     ) -> None:
         """embed() should prepend 'search_document: ' to each text."""
         _mock_sentence_transformers.SentenceTransformer = MagicMock(return_value=mock_model)
-        
+
         embedder = DocumentEmbedder(default_config)
         texts = ["Chunk one.", "Chunk two."]
         embedder.embed(texts)
@@ -199,7 +199,7 @@ class TestEmbed:
     ) -> None:
         """embed() should pass batch_size to the model's encode method."""
         _mock_sentence_transformers.SentenceTransformer = MagicMock(return_value=mock_model)
-        
+
         embedder = DocumentEmbedder(default_config)
         texts = ["Text A", "Text B", "Text C"]
         embedder.embed(texts)
@@ -243,7 +243,7 @@ class TestEmbed:
         bad_model.get_sentence_embedding_dimension.return_value = 768
         bad_model.encode.side_effect = RuntimeError("GPU out of memory")
         _mock_sentence_transformers.SentenceTransformer = MagicMock(return_value=bad_model)
-        
+
         embedder = DocumentEmbedder(default_config)
         with pytest.raises(EmbeddingError, match="Embedding generation failed"):
             embedder.embed(["Some text"])
@@ -268,7 +268,7 @@ class TestEmbedQuery:
     ) -> None:
         """embed_query() should prepend 'search_query: ' to the query."""
         _mock_sentence_transformers.SentenceTransformer = MagicMock(return_value=mock_model)
-        
+
         embedder = DocumentEmbedder(default_config)
         query = "How does retrieval work?"
         embedder.embed_query(query)
@@ -300,7 +300,7 @@ class TestEmbedQuery:
         bad_model.get_sentence_embedding_dimension.return_value = 768
         bad_model.encode.side_effect = RuntimeError("Model error")
         _mock_sentence_transformers.SentenceTransformer = MagicMock(return_value=bad_model)
-        
+
         embedder = DocumentEmbedder(default_config)
         with pytest.raises(EmbeddingError, match="Query embedding generation failed"):
             embedder.embed_query("Some query")
@@ -324,7 +324,7 @@ class TestLazyLoading:
     ) -> None:
         """Model should be loaded on first embed() call."""
         _mock_sentence_transformers.SentenceTransformer = MagicMock(return_value=mock_model)
-        
+
         embedder = DocumentEmbedder(default_config)
         assert embedder._model is None
         embedder.embed(["Test text"])
@@ -335,7 +335,7 @@ class TestLazyLoading:
     ) -> None:
         """Model should be loaded on first embed_query() call."""
         _mock_sentence_transformers.SentenceTransformer = MagicMock(return_value=mock_model)
-        
+
         embedder = DocumentEmbedder(default_config)
         assert embedder._model is None
         embedder.embed_query("Test query")
@@ -347,7 +347,7 @@ class TestLazyLoading:
         """Model should be loaded only once across multiple calls."""
         mock_constructor = MagicMock(return_value=mock_model)
         _mock_sentence_transformers.SentenceTransformer = mock_constructor
-        
+
         embedder = DocumentEmbedder(default_config)
         embedder.embed(["Text 1"])
         embedder.embed(["Text 2"])
@@ -357,10 +357,12 @@ class TestLazyLoading:
 
     def test_import_error_raises(self, default_config: EmbeddingConfig) -> None:
         """Missing sentence-transformers package should raise EmbeddingError."""
-        # Temporarily remove the mock
+        # Simulate an absent package: a None entry in sys.modules forces
+        # `import sentence_transformers` to raise ImportError, without letting
+        # Python import the real installed package or reach the network.
         original = sys.modules.get("sentence_transformers")
-        del sys.modules["sentence_transformers"]
-        
+        sys.modules["sentence_transformers"] = None  # type: ignore[assignment]
+
         try:
             embedder = DocumentEmbedder(default_config)
             with pytest.raises(EmbeddingError, match="sentence-transformers is not installed"):
@@ -377,7 +379,7 @@ class TestLazyLoading:
         _mock_sentence_transformers.SentenceTransformer = MagicMock(
             side_effect=RuntimeError("Model not found")
         )
-        
+
         embedder = DocumentEmbedder(default_config)
         with pytest.raises(EmbeddingError, match="Failed to load embedding model"):
             embedder.embed(["Some text"])
@@ -453,7 +455,7 @@ class TestConfigIntegration:
         config = EmbeddingConfig(device="cuda")
         mock_constructor = MagicMock(return_value=mock_model)
         _mock_sentence_transformers.SentenceTransformer = mock_constructor
-        
+
         embedder = DocumentEmbedder(config)
         embedder.embed(["Test"])
         # Check that device was passed to the constructor

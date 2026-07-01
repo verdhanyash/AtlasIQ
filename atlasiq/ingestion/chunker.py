@@ -13,10 +13,12 @@ All parameters are injected via ``ChunkingConfig``.
 from __future__ import annotations
 
 import logging
-from typing import List
+from typing import TYPE_CHECKING
 
-from atlasiq.backend.core.config import ChunkingConfig
 from atlasiq.backend.core.exceptions import ChunkingError
+
+if TYPE_CHECKING:
+    from atlasiq.backend.core.config import ChunkingConfig
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ class DocumentChunker:
         self.chunk_overlap: int = config.chunk_overlap
         self.separators: list[str] = list(config.separators)
 
-    def chunk(self, text: str) -> List[str]:
+    def chunk(self, text: str) -> list[str]:
         """Split text into overlapping chunks.
 
         Args:

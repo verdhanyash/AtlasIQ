@@ -9,9 +9,12 @@ sitting between the validator and the chunker.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from atlasiq.backend.core.exceptions import DocumentParsingError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +38,7 @@ class DocumentParser:
 
     def __init__(self) -> None:
         """Initialise the parser.  Docling converter is created lazily."""
-        self._converter: object | None = None
+        self._converter: Any = None
 
     def parse(self, file_path: Path) -> str:
         """Parse a document file into Markdown text.
@@ -82,10 +85,10 @@ class DocumentParser:
     def _parse_with_docling(self, file_path: Path) -> str:
         """Parse a rich document via IBM Docling and return Markdown."""
         converter = self._get_converter()
-        result = converter.convert(str(file_path))  # type: ignore[union-attr]
-        return result.document.export_to_markdown()
+        result = converter.convert(str(file_path))
+        return str(result.document.export_to_markdown())
 
-    def _get_converter(self) -> object:
+    def _get_converter(self) -> Any:
         """Lazily create and cache the Docling DocumentConverter.
 
         Returns:

@@ -436,4 +436,220 @@ Lazily import and instantiate `SentenceTransformer` inside `_ensure_model_loaded
 
 ---
 
-*Last updated: 1 July 2026*
+## DL-017: Domain Records as Dataclasses in `backend/domain/`
+
+**Date:** 2 July 2026
+**Phase:** Milestone 1, Step 6A
+**Status:** Active
+
+### Context
+Steps 6B–7 need a shared vocabulary to describe a document and a chunk as they move between the pipeline and the storage layer. The obvious place was `backend/models/`, and the obvious mechanism (given the SQLAlchemy + Qdrant stack) might have been ORM-mapped classes or Pydantic schemas.
+
+### Decision
+Create a new package `atlasiq/backend/domain/` containing plain, framework-independent dataclasses:
+- `DocumentStatus` — enum of lifecycle states (`pending`/`processing`/`completed`/`failed`).
+- `DocumentRecord` — mutable `@dataclass(slots=True)` mirroring the `documents` table.
+- `ChunkRecord` — frozen `@dataclass(frozen=True, slots=True)` mirroring the `chunks` table.
+
+These carry **no** ORM metadata, no persistence behaviour, and no knowledge of any store. The pre-existing empty `backend/models/` package was left untouched (reserved for future Pydantic API request/response schemas, which is what `models` conventionally means in a FastAPI codebase).
+
+### Rationale
+- `models` is an overloaded name that implies ORM tables or Pydantic schemas — these records are neither.
+- `backend/domain/` names the responsibility explicitly: the shared language repositories, the pipeline, and (later) the API all speak.
+- Keeping the domain layer framework-free means repositories own the raw SQL translation, consistent with DL-001 (no heavy abstractions).
+- `DocumentRecord` is mutable because `status`/`updated_at` change during ingestion; `ChunkRecord` is frozen because a chunk is an immutable artifact of one ingestion (extends the DL-010 frozen-dataclass pattern).
+
+### Consequences
+- Two clean boundaries: domain records (pure) and repositories (SQL/driver).
+- No test needs a database to exercise the domain layer.
+- Both `backend/domain/` and `backend/models/` now exist; contributors must not confuse them.
+
+---
+
+## DL-018: Index-Based Deterministic Chunk ID as the PostgreSQL↔Qdrant Join Key
+
+**Date:** 2 July 2026
+**Phase:** Milestone 1, Step 6A (correctness depends on Step 7B)
+**Status:** Active
+
+### Context
+A chunk is stored in two places: its text/metadata in PostgreSQL (`chunks` table) and its vector in Qdrant. The two records need a shared identifier so they can be correlated, deleted, and re-indexed together. That id also determines whether re-ingesting a document duplicates chunks or overwrites them.
+
+### Decision
+Generate the chunk id deterministically from position:
+```
+chunk_id = uuid5(_CHUNK_ID_NAMESPACE, f"{document_id}:{chunk_index}")
+```
+The same `(document_id, chunk_index)` pair always maps to the same id. This id is written to both `chunks.id` (PostgreSQL) and the Qdrant point id. The namespace UUID is a pinned module constant.
+
+### Rationale
+- Identity is **positional** (by `chunk_index`), which makes upserts idempotent: chunk `#3` always overwrites the previous chunk `#3` rather than creating a duplicate.
+- A single shared id is the simplest possible join key between the two stores.
+- Content-addressed ids (hash of chunk text) were considered and rejected for V1 — they would avoid orphans automatically but break the simple index-based join and add complexity with no M1 benefit (YAGNI).
+
+### Consequences / Documented Limitations
+- **Assumption:** `document_id` is stable across re-ingestions of the same file (looked up by hash in the repository, not regenerated per run).
+- **Chunking-config-change limitation:** if `ChunkingConfig` changes and a document produces *fewer* chunks than before, a naive upsert-without-delete would leave **orphaned tail chunks** (e.g. old had 10, new has 7 → chunks 7,8,9 stale). Correctness therefore depends on the Step 7B re-index path deleting all existing chunks (both stores) before re-inserting. This makes delete-then-insert mandatory, not optional.
+- Changing `_CHUNK_ID_NAMESPACE` would orphan every existing chunk id — it must never change.
+
+---
+
+## DL-019: PostgreSQL Repository — Raw-SQL Boundary with Bound Params and Exception Wrapping
+
+**Date:** 2 July 2026
+**Phase:** Milestone 1, Step 6B
+**Status:** Active
+
+### Context
+The pipeline needs to persist and query documents/chunks, and to decide NEW/MODIFIED/UNCHANGED. The in-memory hash registry from DL-007 was always meant to migrate to the database.
+
+### Decision
+Add `atlasiq/backend/repositories/document_repository.py` — an async `DocumentRepository` that is the **only** place raw SQL for the `documents` and `chunks` tables lives. It exposes `upsert_document`, `get_document_by_id`, `get_document_by_hash`, `update_status`, `insert_chunks`, `delete_chunks_for_document`, and `list_documents`. It consumes/returns DL-017 domain records.
+
+### Rationale
+- Every query uses SQLAlchemy `text()` with **bound parameters** (never string interpolation) → SQL-injection safe.
+- Every `SQLAlchemyError` is caught and re-raised as `DatabaseQueryError` (DL-012) → no driver exception leaks past the repository boundary.
+- `get_document_by_hash` is the hook that will let change detection migrate off the in-memory dict (DL-007) without changing its public behaviour.
+- Vector search is intentionally **not** here — this repository is ingestion-focused; retrieval is Milestone 2 (YAGNI).
+
+### Consequences
+- Table/column names live as module constants; JSON chunk metadata is serialized and cast to `JSONB`.
+- Tests mock `PostgresClient`/`AsyncSession` with `AsyncMock` — no real database, honouring DL-014.
+- This step made async unit tests necessary for the first time (see DL-021).
+
+---
+
+## DL-020: Explicit setuptools Package Discovery (Flat-Layout Packaging Fix)
+
+**Date:** 2 July 2026
+**Phase:** Milestone 1 — Packaging / Environment
+**Status:** Active
+
+### Context
+Creating a virtual environment and running `pip install -e ".[dev]"` failed:
+```
+error: Multiple top-level packages discovered in a flat-layout:
+['atlasiq', 'configs', 'prompts', 'watched_documents'].
+```
+The project uses a flat layout (packages at the repo root) and `pyproject.toml` had no `[tool.setuptools]` section, so setuptools' automatic discovery saw sibling resource directories (`configs/`, `prompts/`, `watched_documents/`) as candidate packages and refused to guess.
+
+### Decision
+Add explicit discovery scoped to the application package only:
+```toml
+[tool.setuptools.packages.find]
+include = ["atlasiq*"]
+```
+
+### Rationale
+- Installs only `atlasiq` and its subpackages; excludes resource/doc/test directories that are not importable packages.
+- Standard best-practice fix for a flat-layout project with sibling non-package directories.
+- Avoids restructuring into a `src/` layout — no file moves, existing architecture preserved.
+
+### Consequences
+- `pip install -e ".[dev]"` now builds the `atlasiq` editable wheel successfully.
+- Adding a new top-level application package in future requires it to match `atlasiq*` or be added to `include`.
+
+---
+
+## DL-021: Editable-Install Baseline on Python 3.13 venv; Async Test Tooling
+
+**Date:** 2 July 2026
+**Phase:** Milestone 1 — Environment / Testing
+**Status:** Active
+
+### Context
+Early steps (6A/6B) were developed against a system Python 3.10 interpreter, but `pyproject.toml` declares `requires-python >=3.12`. A dedicated virtual environment was created running **Python 3.13.7** to align with the declared target. During install, `pytest-asyncio`, `sqlalchemy`, and `types-PyYAML` were found to be declared but not present, and the async repository (Step 6B) needed them.
+
+### Decision
+- Standardise development on the `.venv` (Python 3.13) with `atlasiq` installed editable (`pip install -e ".[dev]"`).
+- Ensure the async/test toolchain declared in `pyproject.toml` is actually installed: `pytest-asyncio` (config already had `asyncio_mode = "auto"`), `sqlalchemy` (core dep, needed at runtime by the repository), and `types-PyYAML` (added to dev deps for mypy stubs).
+
+### Rationale
+- Testing and type-checking must run on the same interpreter the project targets (3.12+), not an incidental 3.10.
+- The repository's async methods require real `async` test execution (`pytest-asyncio`), and `sqlalchemy.text`/`SQLAlchemyError` are core runtime imports that cannot be lazy-loaded like the ML models.
+
+### Consequences
+- Because the project now runs on 3.12+, `datetime.UTC` and `enum.StrEnum` (both 3.11+) are available; earlier `# noqa: UP017`/`# noqa: UP042` shims added for the old 3.10 machine were removed (see DL-023).
+- **Environmental note:** on Windows, `pip install -e ".[dev]"` intermittently hit `WinError 32` file locks while writing large binaries (torch, mpmath) — caused by antivirus/IDE indexing scanning `.venv`, **not** a packaging defect. It resolves on retry; the `atlasiq` editable wheel builds cleanly every time.
+
+---
+
+## DL-022: Offline Test Isolation — Simulate a Missing Package via a `None` Entry in `sys.modules`
+
+**Date:** 2 July 2026
+**Phase:** Milestone 1 — Debugging Session (Testing)
+**Status:** Active
+
+### Context — The Bug
+After moving to the Python 3.13 venv (DL-021) where `sentence-transformers` is actually installed, the full suite went from ~0.7s to **90 seconds** and one test failed:
+`tests/test_embedder.py::TestLazyLoading::test_import_error_raises`.
+
+The test verifies that a missing `sentence-transformers` package raises `EmbeddingError`. It simulated absence with:
+```python
+del sys.modules["sentence_transformers"]
+```
+- On the old 3.10 machine the package was **not installed**, so the subsequent real `import sentence_transformers` failed → `EmbeddingError` raised → test passed.
+- On the 3.13 venv the package **is** installed, so deleting the cached entry made Python re-import the **real** package, which then tried to load the `nomic-embed-text-v1.5` model — sending unauthenticated requests to the Hugging Face Hub (the 90s delay and network warnings) and never raising `ImportError`. The test failed and, worse, the suite now hit the network, violating DL-014.
+
+### Decision
+Simulate an absent package without deleting the entry:
+```python
+sys.modules["sentence_transformers"] = None  # forces ImportError on import
+```
+A `None` entry in `sys.modules` makes `import sentence_transformers` raise `ImportError` directly — Python never imports the real package and never touches the network. The original mock is restored in a `finally` block.
+
+### Rationale
+- Reproduces the exact condition under test (package unavailable) deterministically, regardless of whether the package is installed.
+- Restores DL-014 compliance: the suite is fully offline again.
+- Minimal, one-line change; no application code touched; test intent preserved.
+
+### Consequences
+- Suite returned to green and fast: **153 passed in ~1s** (from 90s).
+- General lesson recorded: tests must not rely on a package being *absent from the environment* to simulate failure — the absence must be simulated explicitly.
+
+---
+
+## DL-023: Project-Wide Ruff/MyPy Baseline Hardening (incl. a Real Qdrant Runtime Bug)
+
+**Date:** 2 July 2026
+**Phase:** Milestone 1 — Debugging / Baseline Verification (pre–Step 6C)
+**Status:** Active
+
+### Context
+A pre-Step-6C baseline audit ran `ruff check .` and `mypy .` across the **whole** project for the first time (earlier runs were scoped to individual new files). This surfaced accumulated debt that had been masked: 46 ruff findings and 14 mypy errors across completed modules and tests. All were pre-existing, but the baseline gate required a clean project.
+
+### Decisions & Fixes
+
+**1. Real runtime bug — Qdrant `.search()` removed in qdrant-client 1.18.**
+`mypy` flagged `QdrantClient has no attribute "search"`; verified at runtime (`hasattr(QdrantClient, 'search') == False`). The API was replaced by `query_points()`. Fixed `qdrant_client.py` to call `self.client.query_points(query=…, …).points`. This was a latent `AttributeError` that would have broken Milestone 2 retrieval.
+
+**2. `async_sessionmaker` in `postgres_client.py`.**
+`sessionmaker(..., class_=AsyncSession)` failed mypy's overload check and returned `Any`. Switched to `async_sessionmaker[AsyncSession]` (the SQLAlchemy 2.0 async idiom), fixing both the overload error and the `get_session` `Any`-return.
+
+**3. FastAPI-aware ruff configuration.**
+- `flake8-bugbear.extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body", "fastapi.Header"]` — silences B008 false positives (`Depends()` in argument defaults is the intended FastAPI idiom).
+- `per-file-ignores` for `atlasiq/backend/api/*` and `main.py` on `TC001/TC002/TC003` — because **FastAPI resolves annotations at runtime** (`get_type_hints`), so route-signature imports must stay at runtime scope. Moving them into a `TYPE_CHECKING` block (which ruff otherwise wanted) would break dependency injection.
+
+**4. `DocumentStatus` → `enum.StrEnum`.**
+Now that the project runs on 3.12+, converted from `class DocumentStatus(str, enum.Enum)` to `enum.StrEnum` and removed the obsolete `# noqa: UP042`. Also switched timestamps to `datetime.UTC` (removing `# noqa: UP017`). Where mypy still flagged an enum-vs-str `comparison-overlap` in tests, the assertion was rewritten to `isinstance(..., str)` plus a `str`-typed comparison (stronger and type-clean).
+
+**5. Type-argument and misc fixes.**
+- `dict` → `dict[str, Any]` in `qdrant_client.py` and `routes_health.py`.
+- `parser.py`: typed the lazily-loaded Docling converter as `Any`, removed a stale `# type: ignore`, and wrapped the markdown result in `str(...)` to avoid an `Any`-return.
+- Removed dead imports (`Settings` in `main.py`, `DatabaseConnectionError` in `qdrant_client.py`) and a dead `parser` variable in `test_parser.py`.
+- `types-PyYAML` added to dev deps to resolve the `yaml` stub error under mypy strict.
+- Auto-fixed pervasive stylistic debt (UP017 `datetime.UTC`, UP006/UP035 `list`, I001 import order, W293 whitespace, safe TC import moves in non-FastAPI modules).
+
+### Rationale
+- The baseline gate demands `ruff` and `mypy --strict` clean project-wide, not just on new files.
+- Several findings were genuine (the Qdrant bug, dead code, wrong `dict` generics); the rest were consistency/idiom fixes appropriate for the 3.12+ target.
+- FastAPI-specific rules (B008, TC) are false positives and were configured away rather than worked around per-line.
+
+### Consequences
+- Project-wide baseline is now clean: **`pytest` 153 passed, `ruff check .` all passed, `mypy .` 0 issues in 40 files, `pip check` clean, editable install intact.**
+- Completed modules were modified — but only to fix verified errors (a runtime bug, type errors, dead code), never for stylistic preference beyond what the linters required.
+- Established the convention: FastAPI route modules are exempt from TYPE_CHECKING-move rules, and `Depends`/`Query`/etc. are treated as immutable calls.
+
+---
+
+*Last updated: 2 July 2026*

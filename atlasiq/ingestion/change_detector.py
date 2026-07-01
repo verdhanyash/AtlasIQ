@@ -14,9 +14,12 @@ from __future__ import annotations
 import enum
 import hashlib
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from atlasiq.backend.core.exceptions import DocumentNotFoundError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 

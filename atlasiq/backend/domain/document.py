@@ -14,17 +14,15 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
-# NOTE: `str, enum.Enum` is used rather than `enum.StrEnum` (ruff UP042) because
-# the enum must remain importable on Python 3.10 runtimes; `StrEnum` is 3.11+.
-class DocumentStatus(str, enum.Enum):  # noqa: UP042
+class DocumentStatus(enum.StrEnum):
     """Lifecycle status of a document during ingestion.
 
     The string values match the ``valid_status`` CHECK constraint on the
-    ``documents`` table in ``schema.sql``. Inheriting from ``str`` means the
-    enum members serialize directly to their SQL/JSON string form.
+    ``documents`` table in ``schema.sql``. As a ``StrEnum``, members are
+    ``str`` instances and serialize directly to their SQL/JSON string form.
 
     Members:
         PENDING: Document is registered but ingestion has not started.
@@ -74,9 +72,9 @@ class DocumentRecord:
     page_count: int | None = None
     word_count: int | None = None
     created_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)  # noqa: UP017
+        default_factory=lambda: datetime.now(UTC)
     )
     updated_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)  # noqa: UP017
+        default_factory=lambda: datetime.now(UTC)
     )
     ingested_at: datetime | None = None

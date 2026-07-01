@@ -13,7 +13,6 @@ from atlasiq.backend.core.config import ChunkingConfig
 from atlasiq.backend.core.exceptions import ChunkingError
 from atlasiq.ingestion.chunker import DocumentChunker
 
-
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
 

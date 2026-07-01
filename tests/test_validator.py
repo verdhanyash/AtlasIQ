@@ -6,13 +6,16 @@ files that are missing, have unsupported formats, or exceed size limits.
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from atlasiq.backend.core.config import IngestionConfig
 from atlasiq.backend.core.exceptions import DocumentValidationError
 from atlasiq.ingestion.validator import DocumentValidator
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture

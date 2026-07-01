@@ -8,7 +8,7 @@ are pure — no mocking, no I/O.
 from __future__ import annotations
 
 import dataclasses
-from datetime import timezone
+from datetime import UTC
 
 import pytest
 
@@ -35,8 +35,10 @@ class TestDocumentStatus:
         }
 
     def test_is_str_enum(self) -> None:
-        """Members should compare equal to their string value for SQL/JSON use."""
-        assert DocumentStatus.PENDING == "pending"
+        """Members should be str instances that equal their string value."""
+        assert isinstance(DocumentStatus.PENDING, str)
+        status: str = DocumentStatus.PENDING
+        assert status == "pending"
         assert DocumentStatus.COMPLETED.value == "completed"
 
     def test_string_serialization(self) -> None:
@@ -84,8 +86,8 @@ class TestDocumentRecord:
     def test_timestamps_are_utc(self) -> None:
         """created_at and updated_at default to timezone-aware UTC timestamps."""
         doc = self._make()
-        assert doc.created_at.tzinfo == timezone.utc  # noqa: UP017
-        assert doc.updated_at.tzinfo == timezone.utc  # noqa: UP017
+        assert doc.created_at.tzinfo == UTC
+        assert doc.updated_at.tzinfo == UTC
 
     def test_status_is_mutable(self) -> None:
         """status should be reassignable as the document progresses."""

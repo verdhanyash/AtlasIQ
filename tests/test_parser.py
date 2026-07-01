@@ -8,14 +8,17 @@ test runs.
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from atlasiq.backend.core.exceptions import DocumentParsingError
 from atlasiq.ingestion.parser import DocumentParser
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture
@@ -175,7 +178,6 @@ class TestDoclingIntegration:
 
     def test_docling_not_installed_raises(self, tmp_path: Path) -> None:
         """If docling is not installed, _get_converter should raise."""
-        parser = DocumentParser()
         file = tmp_path / "test.pdf"
         file.write_bytes(b"%PDF-1.4 fake")
 
