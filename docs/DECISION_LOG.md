@@ -745,3 +745,75 @@ Debugging complex projects requires a **systematic, layer-by-layer approach**. S
 
 *Decision Log extended to document debugging session insights*
 
+
+
+---
+
+## DL-024: Debugging Session — Packaging, Test Isolation, and Baseline Verification for Step 6C
+
+**Date:** 2 July 2026
+**Phase:** Milestone 1 — Debugging / Environment Setup (post-Step 6B, pre-Step 6C)
+**Status:** Active
+
+### Context — The Multi-Layer Problem
+After completing Steps 6A (Domain Models) and 6B (PostgreSQL Repository), the project was ready for Step 6C (Qdrant Repository). However, before proceeding, a final baseline verification revealed a cascade of issues that had accumulated but were masked during incremental development:
+
+1. **Packaging failure**: `pip install -e ".[dev]"` failed with "Multiple top-level packages discovered" due to flat-layout packaging confusion.
+2. **Virtual environment mismatch**: Development was happening on Python 3.10 while `pyproject.toml` declared `requires-python >=3.12`.
+3. **Test suite regression**: After moving to Python 3.13 venv, one test (`test_import_error_raises`) failed and the suite slowed from ~1s to 90s due to network calls.
+4. **Linter/type-checker debt**: `ruff check .` showed 46 findings and `mypy .` showed 14 errors across the entire project.
+5. **Real runtime bug**: Qdrant client's `.search()` method was deprecated and replaced with `.query_points()`.
+
+### Decision
+Execute a comprehensive debugging session to resolve all accumulated issues before proceeding to Step 6C:
+
+1. **Fix packaging**: Add explicit setuptools discovery to `pyproject.toml` with `[tool.setuptools.packages.find] include = ["atlasiq*"]`.
+2. **Standardize environment**: Create and use Python 3.13 `.venv` with `pip install -e ".[dev]"`.
+3. **Fix offline test isolation**: Change `del sys.modules["sentence_transformers"]` to `sys.modules["sentence_transformers"] = None` to simulate missing package without network calls.
+4. **Fix Qdrant runtime bug**: Replace deprecated `.search()` with `.query_points()`.
+5. **Resolve all linter/type errors**: Address all `ruff` and `mypy` findings project-wide, including FastAPI-specific configuration.
+
+### Rationale
+- **Step 6C requires a clean baseline**: Qdrant repository implementation depends on a stable foundation.
+- **Network-free tests are non-negotiable**: DL-014 mandates all tests run without Docker or network.
+- **Real bugs must be fixed**: The Qdrant API change would have broken retrieval in Milestone 2.
+- **Environment consistency**: Development must match declared Python version (≥3.12) for feature compatibility.
+- **Accumulated debt blocks progress**: Linter/type errors in completed modules create noise and mask future issues.
+
+### Changes Made
+
+#### Packaging/Environment
+- Added explicit package discovery to `pyproject.toml`
+- Created Python 3.13 `.venv` with editable installation
+- Fixed missing dependencies (`sqlalchemy`, `pytest-asyncio`, `types-PyYAML`)
+
+#### Test Suite Fixes
+- `tests/test_embedder.py`: Changed package simulation to use `None` in `sys.modules`
+- All tests now pass in ~1 second with no network calls
+
+#### Runtime Bug Fix
+- `atlasiq/database/qdrant_client.py`: Replaced deprecated `.search()` with `.query_points()`
+
+#### Linter/Type Checker Resolution
+- **Qdrant client**: Added type arguments for `dict[str, Any]`
+- **PostgreSQL client**: Switched to `async_sessionmaker[AsyncSession]` for correct typing
+- **Parser**: Fixed type annotations for Docling lazy loading
+- **Routes**: Added type arguments for response dictionaries
+- **Tests**: Fixed enum comparison type hints
+- **Ruff configuration**: Added FastAPI-aware rules to handle `Depends()` false positives
+- **Cleanup**: Removed dead imports, whitespace issues, obsolete noqa comments
+
+#### Documentation Updates
+- Updated `DECISION_LOG.md` with this session's decisions (DL-020 through DL-024)
+
+### Consequences
+- **Project ready for Step 6C**: All verification passes: `pytest` (153 tests), `ruff check .`, `mypy .`, `pip check`, editable installation.
+- **Environment standardized**: Development now uses Python 3.13 `.venv` matching declared requirements.
+- **Test suite robust**: No network dependencies, fast execution (~1s).
+- **Real bugs caught and fixed**: Qdrant API issue resolved before it could affect retrieval.
+- **Code quality baseline**: Clean lint/type check across entire project, not just new files.
+- **Lessons documented**: Test isolation techniques, packaging best practices, and environment management decisions captured for future reference.
+
+---
+
+*Last updated: 2 July 2026*
