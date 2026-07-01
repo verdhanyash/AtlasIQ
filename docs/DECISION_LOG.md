@@ -653,3 +653,95 @@ Now that the project runs on 3.12+, converted from `class DocumentStatus(str, en
 ---
 
 *Last updated: 2 July 2026*
+
+
+## DL-023: PostgreSQL Repository Implementation Debugging Session
+
+**Date:** 2 July 2026  
+**Phase:** Milestone 1, Step 6B — Debugging Session  
+**Status:** Active
+
+### Context — The Multi-Stage Debugging Journey
+Step 6B (PostgreSQL Repository) involved implementing `DocumentRepository` with proper SQLAlchemy async patterns. This triggered a cascade of issues that required methodical debugging across several hours:
+
+1. **Environment setup issues** — transitioning from system Python 3.10 to declared target Python 3.13.7
+2. **Packaging problems** — setuptools failing with "Multiple top-level packages" error
+3. **Type-checking failures** — 14 mypy errors across 6 files
+4. **Test failures** — offline test isolation broken when `sentence-transformers` was actually installed
+5. **Runtime bugs discovered** — Qdrant API changed in version 1.18
+
+### Decision: Systematic Multi-Layer Fixes
+Instead of piecemeal fixes, we implemented a comprehensive debugging approach:
+
+1. **Environment Layer**: Created fresh Python 3.13.7 `.venv` and validated `pip install -e ".[dev]"` works
+2. **Packaging Layer**: Added explicit `[tool.setuptools.packages.find]` to exclude non-package directories
+3. **Type-Safety Layer**: Addressed all 14 mypy errors with specific fixes for each category
+4. **Testing Layer**: Fixed offline test isolation with `sys.modules["sentence_transformers"] = None` pattern
+5. **Runtime Layer**: Updated Qdrant client from deprecated `.search()` to `.query_points()`
+
+### Key Debugging Insights and Fixes
+
+**Packaging Fix (DL-020)**:
+```
+[tool.setuptools.packages.find]
+include = ["atlasiq*"]
+```
+This excluded `configs/`, `prompts/`, `watched_documents/` directories from being mistaken as Python packages.
+
+**Async SQLAlchemy Pattern Fix**:
+- Changed `sessionmaker(bind=engine, class_=AsyncSession)` to `async_sessionmaker[AsyncSession]`
+- This fixed mypy overload errors and ensured proper async session handling
+
+**Qdrant API Migration**:
+- Discovered `QdrantClient().search()` removed in qdrant-client 1.18
+- Migrated to `client.query_points(query=..., ...).points`
+- **This was a latent runtime bug** that would have broken retrieval in Milestone 2
+
+**Offline Test Isolation Fix**:
+Original (failing when package installed):
+```python
+del sys.modules["sentence_transformers"]
+```
+Fixed:
+```python
+sys.modules["sentence_transformers"] = None  # forces ImportError
+```
+This ensures offline testing compliance (DL-014) regardless of package installation status.
+
+**FastAPI Ruff Configuration**:
+Added specialized rules for FastAPI's runtime annotation resolution:
+- `flake8-bugbear.extend-immutable-calls` for FastAPI dependency injection
+- `per-file-ignores` for `TYPE_CHECKING` imports in API routes
+
+**Python 3.12+ Language Features**:
+- Migrated from `# noqa: UP017` to `datetime.UTC`
+- Converted `DocumentStatus` from `class DocumentStatus(str, enum.Enum)` to `enum.StrEnum`
+- Removed compatibility shims now that we're on Python ≥3.12
+
+### Rationale
+The debugging session revealed that several "minor" issues were actually:
+1. **Critical runtime bugs** (Qdrant API break)
+2. **Broken conventions** (async session patterns)
+3. **Environmental assumptions** (3.10 vs 3.13 Python features)
+4. **Testing fragility** (package installation state affecting offline tests)
+
+By systematically addressing each layer, we:
+- Fixed actual bugs before they became production issues
+- Established a clean baseline for Step 6C
+- Maintained the "all tests pass offline" principle
+- Achieved strict mypy compliance across the entire codebase
+
+### Consequences
+- **Project health restored**: All 153 tests pass, ruff clean, mypy strict clean
+- **Environment standardized**: All development now uses Python 3.13.7 venv
+- **Latent bugs fixed**: Qdrant retrieval will work in Milestone 2
+- **Stronger foundations**: Clean slate for implementing Step 6C (Qdrant Repository)
+- **Less technical debt**: Removed Python 3.10 compatibility shims, using modern language features
+
+### Lesson Learned
+Debugging complex projects requires a **systematic, layer-by-layer approach**. Surface errors often mask deeper architectural issues. The most valuable discovery was the Qdrant API breakage — found during type-checking, not runtime testing, demonstrating the value of strict static analysis even for dynamic Python projects.
+
+---
+
+*Decision Log extended to document debugging session insights*
+
