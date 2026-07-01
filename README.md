@@ -298,34 +298,33 @@ Completed infrastructure includes:
 
 ### Completed
 
-* ✅ Document Validator
-* ✅ Document Parser (IBM Docling Integration)
+* ✅ Step 1: Document Validator
+* ✅ Step 2: Document Parser (IBM Docling Integration)
+* ✅ Step 3: Metadata Extraction & Change Detection
+* ✅ Step 4: Text Chunker (Recursive Character Splitting)
+* ✅ Step 5: Document Embedder (Lazy-Loaded sentence-transformers)
 
 ### Remaining
 
-* ⏳ Metadata Extraction
-* ⏳ Change Detection
-* ⏳ Semantic Chunking
-* ⏳ Embedding Generation
-* ⏳ Persistence Layer
-* ⏳ Ingestion Pipeline Orchestration
-* ⏳ Folder Watcher
-* ⏳ Ingestion REST API
+* ⏳ Step 6: Repository Layer (PostgreSQL + Qdrant)
+* ⏳ Step 7: Pipeline Orchestration
+* ⏳ Step 8: Ingestion API & Optional Folder Watcher
 
 ## Latest Implementation
 
-### Step 2 — Document Parser
+### Step 5 — Document Embedder
 
-Implemented a modular document parsing service responsible for converting supported document formats into structured Markdown/text.
+Implemented a production-ready embedder that generates dense vector embeddings using `nomic-ai/nomic-embed-text-v1.5` via sentence-transformers.
 
 **Highlights**
 
-* IBM Docling integration for PDF and DOCX parsing
-* Native handling for Markdown and TXT files
-* Preserves document structure (headings, paragraphs, tables where supported)
-* Clean parser service following the project's layered architecture
-* Comprehensive unit tests
-* No metadata extraction, chunking, or embedding logic (single responsibility)
+* Lazy model loading (only loads when first embedding is requested)
+* Automatic prefix management (`search_document:` / `search_query:`)
+* Batch processing with configurable batch size
+* Dynamic dimension property (not hardcoded)
+* Full encapsulation (no SentenceTransformer details leak)
+* 34 comprehensive unit tests (fully mocked, no model download)
+* Zero architectural drift from existing modules
 
 **Engineering Principles**
 

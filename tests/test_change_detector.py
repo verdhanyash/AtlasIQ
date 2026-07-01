@@ -34,14 +34,14 @@ class TestHashComputation:
         file = tmp_path / "test.txt"
         file.write_bytes(content)
         expected = hashlib.sha256(content).hexdigest()
-        assert detector.compute_hash(file) == expected
+        assert detector._compute_hash(file) == expected
 
     def test_hash_is_deterministic(self, detector: ChangeDetector, tmp_path: Path) -> None:
         """Hashing the same file twice should produce the same result."""
         file = tmp_path / "stable.txt"
         file.write_text("consistent content", encoding="utf-8")
-        hash1 = detector.compute_hash(file)
-        hash2 = detector.compute_hash(file)
+        hash1 = detector._compute_hash(file)
+        hash2 = detector._compute_hash(file)
         assert hash1 == hash2
 
     def test_different_content_different_hash(
@@ -52,20 +52,20 @@ class TestHashComputation:
         file_b = tmp_path / "b.txt"
         file_a.write_text("content A", encoding="utf-8")
         file_b.write_text("content B", encoding="utf-8")
-        assert detector.compute_hash(file_a) != detector.compute_hash(file_b)
+        assert detector._compute_hash(file_a) != detector._compute_hash(file_b)
 
     def test_empty_file_hash(self, detector: ChangeDetector, tmp_path: Path) -> None:
         """An empty file should have the known SHA-256 hash of empty bytes."""
         file = tmp_path / "empty.txt"
         file.write_bytes(b"")
         expected = hashlib.sha256(b"").hexdigest()
-        assert detector.compute_hash(file) == expected
+        assert detector._compute_hash(file) == expected
 
     def test_hash_is_64_char_hex(self, detector: ChangeDetector, tmp_path: Path) -> None:
         """SHA-256 hex digest should be exactly 64 lowercase hex characters."""
         file = tmp_path / "check.txt"
         file.write_text("data", encoding="utf-8")
-        h = detector.compute_hash(file)
+        h = detector._compute_hash(file)
         assert len(h) == 64
         assert all(c in "0123456789abcdef" for c in h)
 
@@ -75,7 +75,7 @@ class TestHashComputation:
         # Write 256 KB of data (larger than the 64 KB chunk size)
         file.write_bytes(b"x" * 256 * 1024)
         expected = hashlib.sha256(b"x" * 256 * 1024).hexdigest()
-        assert detector.compute_hash(file) == expected
+        assert detector._compute_hash(file) == expected
 
     def test_hash_nonexistent_file_raises(
         self, detector: ChangeDetector, tmp_path: Path
@@ -83,7 +83,7 @@ class TestHashComputation:
         """Hashing a missing file should raise DocumentNotFoundError."""
         missing = tmp_path / "ghost.pdf"
         with pytest.raises(DocumentNotFoundError, match="file not found"):
-            detector.compute_hash(missing)
+            detector._compute_hash(missing)
 
 
 # ── Change detection (check) ────────────────────────────────────────────────

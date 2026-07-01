@@ -42,6 +42,10 @@ class ChunkingError(AtlasIQError):
     """Raised when text chunking fails."""
 
 
+class EmbeddingError(AtlasIQError):
+    """Raised when embedding generation fails."""
+
+
 class DocumentNotFoundError(AtlasIQError):
     """Raised when a requested document does not exist."""
 

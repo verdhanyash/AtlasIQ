@@ -67,7 +67,7 @@ class ChangeDetector:
         Raises:
             DocumentNotFoundError: If the file does not exist or is not a file.
         """
-        current_hash = self.compute_hash(file_path)
+        current_hash = self._compute_hash(file_path)
         key = str(file_path.resolve())
 
         if key not in self._registry:
@@ -97,14 +97,14 @@ class ChangeDetector:
         Raises:
             DocumentNotFoundError: If the file does not exist or is not a file.
         """
-        content_hash = self.compute_hash(file_path)
+        content_hash = self._compute_hash(file_path)
         key = str(file_path.resolve())
         self._registry[key] = content_hash
         logger.info("Registered hash for %s", file_path.name)
         return content_hash
 
     @staticmethod
-    def compute_hash(file_path: Path) -> str:
+    def _compute_hash(file_path: Path) -> str:
         """Compute the SHA-256 hex digest of a file's contents.
 
         Reads the file in fixed-size chunks to keep memory usage constant
