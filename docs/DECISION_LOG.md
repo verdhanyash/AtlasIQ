@@ -845,4 +845,35 @@ Payload keys are module constants (`_PAYLOAD_DOCUMENT_ID`, `_PAYLOAD_CHUNK_INDEX
 
 ---
 
+## DL-026: Step 6D (Database Clients) — Documented No-Op with a Vector-Size Mismatch Risk
+
+**Date:** 3 July 2026
+**Phase:** Milestone 1, Step 6D
+**Status:** Active
+
+### Context
+Step 6D in `EXECUTION_PLAN_M1.md` is scoped as *"touch-ups only — surgical review + minimal hardening, not a rewrite,"* with two **conditional** changes and an explicit escape hatch: *"If no change is required, this step is a documented no-op in the decision log."* Before doing anything, the two existing clients (`postgres_client.py`, `qdrant_client.py`), `dependencies.py`, and `config.py` were audited against those conditions.
+
+### Findings & Decision
+
+**1. `PostgresClient.session()` async-context-manager helper — not added.**
+The plan gated this on *"if repositories need cleaner transaction scoping."* They do not: `DocumentRepository` already uses `async with self._client.session_factory() as session:`, and `async_sessionmaker` returns a session that is itself an async context manager. Adding a `session()` wrapper would be an unused indirection, which `agent.md` forbids ("no empty abstractions", YAGNI) and which DL-001's "no heavy abstractions" spirit discourages. → **No code change.** Consequently there is no "new helper", so the plan's *"light unit tests for any new helper"* clause does not apply and `tests/test_db_clients.py` was not created. Existing client behavior is untouched, so existing tests remain the regression guard.
+
+**2. Qdrant `vector_size` ↔ embedding dimension — real mismatch risk, documented (not fixed).**
+The plan asked to *"verify `vector_size` is wired from `EmbeddingConfig.dimension` … If a mismatch risk exists, document it."*
+- `QdrantConfig.vector_size` (default `768`) and `EmbeddingConfig` (model `nomic-ai/nomic-embed-text-v1.5`) are **two independent config values**. There is **no `EmbeddingConfig.dimension` field**; the embedding dimension is implicit in the chosen model.
+- **Risk:** if the embedding model is ever changed without also updating `qdrant.vector_size`, the two drift apart. Qdrant would then reject or corrupt upserts because the collection was created with the wrong dimensionality — a runtime failure surfacing only during ingestion.
+- **Decision:** per the plan's own instruction, the risk is **documented here** rather than fixed. Introducing an `EmbeddingConfig.dimension` field plus a cross-config validator would be a config/structure change beyond "touch-ups," and `agent.md` requires justification + approval before adding new configuration. A fail-fast startup guard (assert `qdrant.vector_size == embedding.dimension`, consistent with DL-004) is the recommended future hardening and was offered, but is **deferred** as it is not mandated by Step 6D.
+
+### Rationale
+- Both plan conditions resolve to "no code change required": one is genuinely unnecessary, the other is explicitly a "document it" case.
+- Respects `agent.md`: modify only what the task requires, do not introduce abstractions or config changes without approval, do not refactor solid existing code.
+
+### Consequences
+- **Step 6D introduces zero code changes** — it is a documented no-op, exactly as the plan permits.
+- The `vector_size`/embedding-dimension mismatch is now a recorded known limitation; when the embedding model is swapped, `qdrant.vector_size` must be updated in lock-step (or the deferred startup guard should be implemented first).
+- Baseline unchanged and re-verified: **160 tests pass, `ruff check .` clean, `mypy .` clean.**
+
+---
+
 *Last updated: 3 July 2026*
