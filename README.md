@@ -303,39 +303,47 @@ Completed infrastructure includes:
 * ✅ Step 3: Metadata Extraction & Change Detection
 * ✅ Step 4: Text Chunker (Recursive Character Splitting)
 * ✅ Step 5: Document Embedder (Lazy-Loaded sentence-transformers)
+* ✅ Step 6A: Domain Records (framework-independent dataclasses)
+* ✅ Step 6B: PostgreSQL Repository (documents + chunks)
+* ✅ Step 6C: Qdrant Chunk Vector Repository
+* ✅ Step 6D: Database Clients (reviewed — documented no-op)
+* ✅ Step 7A: Ingestion Pipeline Orchestrator
 
 ### Remaining
 
-* ⏳ Step 6: Repository Layer (PostgreSQL + Qdrant)
-* ⏳ Step 7: Pipeline Orchestration
+* ⏳ Step 7B: Incremental Update Logic (modified-document re-indexing)
 * ⏳ Step 8: Ingestion API & Optional Folder Watcher
 
 ## Latest Implementation
 
-### Step 5 — Document Embedder
+### Step 7A — Ingestion Pipeline Orchestrator
 
-Implemented a production-ready embedder that generates dense vector embeddings using `nomic-ai/nomic-embed-text-v1.5` via sentence-transformers.
+Implemented the conductor that wires every ingestion stage into a single `async ingest(path)` flow: **Validator → Change Detector → Parser → Chunker → Embedder → PostgreSQL + Qdrant repositories**.
 
 **Highlights**
 
-* Lazy model loading (only loads when first embedding is requested)
-* Automatic prefix management (`search_document:` / `search_query:`)
-* Batch processing with configurable batch size
-* Dynamic dimension property (not hardcoded)
-* Full encapsulation (no SentenceTransformer details leak)
-* 34 comprehensive unit tests (fully mocked, no model download)
-* Zero architectural drift from existing modules
+* Pure orchestration — no parsing/embedding/SQL logic of its own; all seven collaborators are constructor-injected.
+* Database-backed change detection (NEW / MODIFIED / UNCHANGED) via a deterministic, path-derived document id — survives process restarts (no in-memory registry).
+* Deterministic chunk ids shared as the PostgreSQL ↔ Qdrant join key (idempotent upserts).
+* Lifecycle contract: `PROCESSING` → `COMPLETED`, or `FAILED` on any error (then re-raised).
+* 9 unit tests, fully mocked — no database, no network, no models.
+
+**Supporting repository layer (Step 6A–6D)**
+
+* Framework-independent domain records (`DocumentRecord`, `ChunkRecord`).
+* `DocumentRepository` — the only home for raw SQL over `documents`/`chunks` (bound params, domain-exception wrapping).
+* `ChunkVectorRepository` — ingestion-write-only wrapper over Qdrant (payload shaping + filtered deletes).
 
 **Engineering Principles**
 
 * Dependency Injection
 * Separation of Concerns
-* Configurable Architecture
+* Single Responsibility
 * Production-oriented modular design
 
 **Status**
 
-✅ Completed and tested.
+✅ Completed and tested — full suite: **169 tests passing**, `ruff` and `mypy --strict` clean.
 
 
 # Development Roadmap
