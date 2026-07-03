@@ -917,3 +917,42 @@ The document row is upserted as `PROCESSING` before parsing. The parse→chunk�
 ---
 
 *Last updated: 3 July 2026*
+
+
+---
+
+## DL-028: Incremental Re-Indexing for Modified Documents (Delete-Then-Insert)
+
+**Date:** 4 July 2026
+**Phase:** Milestone 1, Step 7B
+**Status:** Active
+
+### Context
+Step 7A detected MODIFIED documents but did not re-ingest them (it returned `skipped=True`). Step 7B implements the actual re-indexing. The correctness hazard is the DL-018 index-based chunk id: because a chunk's id is `uuid5(document_id, chunk_index)`, re-inserting with plain `INSERT` would collide on existing ids, and a new version producing *fewer* chunks would leave orphaned tail chunks (old chunks 7–9 when the new doc only has 0–6) that no upsert would ever overwrite.
+
+### Decision
+On MODIFIED, the pipeline performs **delete-then-insert** across both stores before re-processing:
+1. `document_repo.delete_chunks_for_document(document_id)` (PostgreSQL chunks).
+2. `vector_repo.delete_for_document(document_id)` (Qdrant vectors).
+3. Re-run the shared `_process` path (parse → chunk → embed → insert → store).
+
+The **document row itself is kept** (not deleted): its `id` and `created_at` stay stable, while `file_hash`, `updated_at`, `word_count`, and `status` are refreshed. NEW and MODIFIED now share one `_process` implementation; only MODIFIED runs the pre-delete.
+
+**Supporting changes:**
+- `_process` regained an `existing` parameter to **preserve `created_at`** across re-ingestions (NEW uses now; MODIFIED keeps the original).
+- `word_count` is only known after parsing, but the document is upserted as PROCESSING *before* parsing (so a failed parse still leaves a tracked record). The completion step therefore switched from `update_status(COMPLETED)` to a second `upsert_document` that carries the final `word_count` + COMPLETED status. FAILED still uses `update_status`.
+
+### Rationale
+- **Delete-then-insert ordering is mandatory**, not cosmetic — it is the only thing that prevents orphaned tail chunks under the index-based id scheme (DL-018).
+- Deleting chunks (not the document row) preserves creation history and avoids FK churn; PostgreSQL `ON DELETE CASCADE` is not relied upon because the row is intentionally retained.
+- Deterministic chunk ids make the re-run idempotent even after a half-failed prior attempt.
+
+### Consequences
+- MODIFIED now returns `skipped=False` with the fresh `chunks_created` count; the "deferred to Step 7B" note in DL-027 is now realised.
+- Both stores are cleared before their respective re-inserts (verified by call-order tests).
+- Milestone 1 ingestion pipeline is functionally complete end-to-end (NEW / MODIFIED / UNCHANGED). Remaining M1 work is the ingestion API and optional watcher (Step 8).
+- Tests: MODIFIED re-index + completion, delete-before-insert ordering (both stores), `created_at` preservation, and MODIFIED partial-failure → FAILED. Baseline: **172 tests pass, `ruff` + `mypy --strict` clean.**
+
+---
+
+*Last updated: 4 July 2026*

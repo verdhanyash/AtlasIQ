@@ -308,25 +308,26 @@ Completed infrastructure includes:
 * ✅ Step 6C: Qdrant Chunk Vector Repository
 * ✅ Step 6D: Database Clients (reviewed — documented no-op)
 * ✅ Step 7A: Ingestion Pipeline Orchestrator
+* ✅ Step 7B: Incremental Update Logic (modified-document re-indexing)
 
 ### Remaining
 
-* ⏳ Step 7B: Incremental Update Logic (modified-document re-indexing)
 * ⏳ Step 8: Ingestion API & Optional Folder Watcher
 
 ## Latest Implementation
 
-### Step 7A — Ingestion Pipeline Orchestrator
+### Step 7A/7B — Ingestion Pipeline Orchestrator + Incremental Re-Indexing
 
-Implemented the conductor that wires every ingestion stage into a single `async ingest(path)` flow: **Validator → Change Detector → Parser → Chunker → Embedder → PostgreSQL + Qdrant repositories**.
+Implemented the conductor that wires every ingestion stage into a single `async ingest(path)` flow: **Validator → Change Detector → Parser → Chunker → Embedder → PostgreSQL + Qdrant repositories**, including safe re-indexing of modified documents.
 
 **Highlights**
 
 * Pure orchestration — no parsing/embedding/SQL logic of its own; all seven collaborators are constructor-injected.
 * Database-backed change detection (NEW / MODIFIED / UNCHANGED) via a deterministic, path-derived document id — survives process restarts (no in-memory registry).
 * Deterministic chunk ids shared as the PostgreSQL ↔ Qdrant join key (idempotent upserts).
-* Lifecycle contract: `PROCESSING` → `COMPLETED`, or `FAILED` on any error (then re-raised).
-* 9 unit tests, fully mocked — no database, no network, no models.
+* **Incremental updates:** a modified document is re-indexed with a mandatory delete-then-insert across both stores (no duplicate or orphaned chunks), keeping the document row and its `created_at` stable.
+* Lifecycle contract: `PROCESSING` → `COMPLETED` (with final `word_count`), or `FAILED` on any error (then re-raised).
+* 12 unit tests, fully mocked — no database, no network, no models.
 
 **Supporting repository layer (Step 6A–6D)**
 

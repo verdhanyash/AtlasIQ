@@ -139,18 +139,17 @@ class IngestionPipeline:
             return IngestionResult(document_id, status, chunks_created=0, skipped=True)
 
         if status is ChangeStatus.MODIFIED:
-            # Step 7A is detection/orchestration only. Safe re-indexing of a
-            # modified document (delete its existing chunks from both stores,
-            # then re-insert) is implemented in Step 7B. Until then a modified
-            # document is detected and reported but not re-ingested here.
-            logger.info(
-                "Detected modified document %s (%s); re-indexing deferred to Step 7B",
-                document_id,
-                metadata.file_name,
-            )
-            return IngestionResult(document_id, status, chunks_created=0, skipped=True)
+            # Safe re-indexing (DL-018): delete the document's existing chunks
+            # from BOTH stores before re-inserting. Delete-then-insert ordering
+            # is mandatory — it is what prevents orphaned tail chunks when the
+            # new version produces fewer chunks than the previous one. The
+            # document row itself is kept (id + created_at stable); only its
+            # chunks are replaced.
+            logger.info("Re-indexing modified document %s (%s)", document_id, metadata.file_name)
+            await self._document_repo.delete_chunks_for_document(document_id)
+            self._vector_repo.delete_for_document(document_id)
 
-        chunks_created = await self._process(document_id, file_path, metadata, file_hash)
+        chunks_created = await self._process(document_id, file_path, metadata, file_hash, existing)
 
         logger.info(
             "Ingested %s as %s (%d chunks)", metadata.file_name, status.value, chunks_created
@@ -163,18 +162,24 @@ class IngestionPipeline:
         file_path: Path,
         metadata: DocumentMetadata,
         file_hash: str,
+        existing: DocumentRecord | None,
     ) -> int:
-        """Parse, chunk, embed, and persist a NEW document; manage its status.
+        """Parse, chunk, embed, and persist a document; manage its status.
 
-        Only reached for NEW documents in Step 7A. The document row is upserted
-        as PROCESSING first; on success the status becomes COMPLETED, and on any
-        failure it becomes FAILED before the error is re-raised.
+        Shared by the NEW and MODIFIED paths. The document row is upserted as
+        PROCESSING first (so a mid-pipeline failure still leaves a tracked
+        record); on success it is upserted again as COMPLETED carrying the final
+        ``word_count``; on any failure the status is set to FAILED and the error
+        is re-raised. For a MODIFIED document the caller has already removed the
+        stale chunks before this runs.
 
         Args:
             document_id: The document's stable id.
             file_path: Path to the source file.
             metadata: Extracted file-system metadata (name/extension/size).
             file_hash: SHA-256 content hash of the file.
+            existing: The previously stored record, if any. Its ``created_at`` is
+                preserved so re-ingestion does not reset the creation time.
 
         Returns:
             The number of chunks created.
@@ -187,7 +192,7 @@ class IngestionPipeline:
             file_type=metadata.file_extension,
             file_size_bytes=metadata.file_size_bytes,
             status=DocumentStatus.PROCESSING,
-            created_at=now,
+            created_at=existing.created_at if existing else now,
             updated_at=now,
             ingested_at=now,
         )
@@ -209,7 +214,13 @@ class IngestionPipeline:
 
             await self._document_repo.insert_chunks(records)
             self._vector_repo.store(records, vectors)
-            await self._document_repo.update_status(document_id, DocumentStatus.COMPLETED)
+
+            # Finalise: record the word count and mark COMPLETED in one upsert
+            # (word_count is only known post-parse, after the PROCESSING upsert).
+            document.status = DocumentStatus.COMPLETED
+            document.word_count = len(text.split())
+            document.updated_at = datetime.now(UTC)
+            await self._document_repo.upsert_document(document)
         except Exception:
             await self._document_repo.update_status(document_id, DocumentStatus.FAILED)
             logger.exception("Ingestion failed for %s; status set to FAILED", document_id)

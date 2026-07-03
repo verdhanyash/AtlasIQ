@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from atlasiq.backend.core.exceptions import ChunkingError
+from atlasiq.backend.core.exceptions import ChunkingError, EmbeddingError
 from atlasiq.backend.domain import DocumentRecord, DocumentStatus, chunk_id
 from atlasiq.ingestion.change_detector import ChangeStatus
 from atlasiq.ingestion.pipeline import IngestionPipeline
@@ -118,9 +118,10 @@ class TestNewDocument:
 
         mocks["document_repo"].insert_chunks.assert_awaited_once()
         mocks["vector_repo"].store.assert_called_once()
-        # final status transition is COMPLETED
-        last_status = mocks["document_repo"].update_status.await_args.args[1]
-        assert last_status is DocumentStatus.COMPLETED
+        # the final document upsert marks COMPLETED and records the word count
+        final_doc = mocks["document_repo"].upsert_document.await_args.args[0]
+        assert final_doc.status is DocumentStatus.COMPLETED
+        assert final_doc.word_count == 2  # parser mock returns "parsed text"
 
     @pytest.mark.asyncio
     async def test_upserts_processing_before_parsing(self, tmp_path: Path) -> None:
@@ -197,14 +198,14 @@ class TestUnchangedDocument:
         assert result.status is ChangeStatus.MODIFIED
 
 
-# ── MODIFIED (detection only; re-indexing is Step 7B) ────────────────────────
+# ── MODIFIED (incremental re-indexing — Step 7B) ─────────────────────────────
 
 
 class TestModifiedDocument:
-    """A modified document is detected but not re-indexed in Step 7A."""
+    """A modified document is re-indexed: stale chunks deleted, fresh ones added."""
 
     @pytest.mark.asyncio
-    async def test_detected_but_not_reindexed(self, tmp_path: Path) -> None:
+    async def test_reindexes_and_completes(self, tmp_path: Path) -> None:
         pipeline, mocks = _build_pipeline()
         mocks["document_repo"].get_document_by_id = AsyncMock(
             return_value=_existing_record("old-hash", DocumentStatus.COMPLETED)
@@ -213,15 +214,73 @@ class TestModifiedDocument:
         result = await pipeline.ingest(_make_file(tmp_path))
 
         assert result.status is ChangeStatus.MODIFIED
-        assert result.skipped is True
-        assert result.chunks_created == 0
-        # Step 7A performs no re-indexing work — that is Step 7B's responsibility
-        mocks["document_repo"].delete_chunks_for_document.assert_not_awaited()
-        mocks["vector_repo"].delete_for_document.assert_not_called()
-        mocks["document_repo"].upsert_document.assert_not_awaited()
-        mocks["document_repo"].insert_chunks.assert_not_awaited()
-        mocks["vector_repo"].store.assert_not_called()
-        mocks["parser"].parse.assert_not_called()
+        assert result.skipped is False
+        assert result.chunks_created == 2
+        mocks["document_repo"].delete_chunks_for_document.assert_awaited_once()
+        mocks["vector_repo"].delete_for_document.assert_called_once()
+        mocks["document_repo"].insert_chunks.assert_awaited_once()
+        mocks["vector_repo"].store.assert_called_once()
+        final_doc = mocks["document_repo"].upsert_document.await_args.args[0]
+        assert final_doc.status is DocumentStatus.COMPLETED
+
+    @pytest.mark.asyncio
+    async def test_deletes_before_inserts(self, tmp_path: Path) -> None:
+        pipeline, mocks = _build_pipeline()
+        mocks["document_repo"].get_document_by_id = AsyncMock(
+            return_value=_existing_record("old-hash", DocumentStatus.COMPLETED)
+        )
+        order: list[str] = []
+
+        async def _del_pg(*_a: object, **_k: object) -> None:
+            order.append("delete_pg")
+
+        def _del_qd(*_a: object, **_k: object) -> None:
+            order.append("delete_qd")
+
+        async def _insert(*_a: object, **_k: object) -> None:
+            order.append("insert_pg")
+
+        def _store(*_a: object, **_k: object) -> None:
+            order.append("store_qd")
+
+        mocks["document_repo"].delete_chunks_for_document.side_effect = _del_pg
+        mocks["vector_repo"].delete_for_document.side_effect = _del_qd
+        mocks["document_repo"].insert_chunks.side_effect = _insert
+        mocks["vector_repo"].store.side_effect = _store
+
+        await pipeline.ingest(_make_file(tmp_path))
+
+        # both stores must be cleared before their respective re-inserts
+        assert order.index("delete_pg") < order.index("insert_pg")
+        assert order.index("delete_qd") < order.index("store_qd")
+
+    @pytest.mark.asyncio
+    async def test_preserves_created_at(self, tmp_path: Path) -> None:
+        pipeline, mocks = _build_pipeline()
+        original_created = datetime(2020, 1, 1, tzinfo=UTC)
+        existing = _existing_record("old-hash", DocumentStatus.COMPLETED)
+        existing.created_at = original_created
+        mocks["document_repo"].get_document_by_id = AsyncMock(return_value=existing)
+
+        await pipeline.ingest(_make_file(tmp_path))
+
+        # every upsert during re-index keeps the original creation time
+        for call in mocks["document_repo"].upsert_document.await_args_list:
+            assert call.args[0].created_at == original_created
+
+    @pytest.mark.asyncio
+    async def test_failure_leaves_failed(self, tmp_path: Path) -> None:
+        pipeline, mocks = _build_pipeline()
+        mocks["document_repo"].get_document_by_id = AsyncMock(
+            return_value=_existing_record("old-hash", DocumentStatus.COMPLETED)
+        )
+        mocks["embedder"].embed.side_effect = EmbeddingError("boom")
+
+        with pytest.raises(EmbeddingError):
+            await pipeline.ingest(_make_file(tmp_path))
+
+        last_status = mocks["document_repo"].update_status.await_args.args[1]
+        assert last_status is DocumentStatus.FAILED
 
 
 # ── Failure handling ─────────────────────────────────────────────────────────
