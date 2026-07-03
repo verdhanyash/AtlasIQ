@@ -876,4 +876,44 @@ The plan asked to *"verify `vector_size` is wired from `EmbeddingConfig.dimensio
 
 ---
 
+## DL-027: Ingestion Pipeline Orchestrator — DB-Backed Change Detection, Deterministic Document ID, FAILED-Status Contract
+
+**Date:** 3 July 2026
+**Phase:** Milestone 1, Step 7A
+**Status:** Active
+
+### Context
+Step 7A introduces `atlasiq/ingestion/pipeline.py` — the conductor that wires Validator → ChangeDetector → Parser → Chunker → Embedder → both repositories into one `async ingest(path)` flow. Two design questions had to be resolved because the plan's flow and the actual module interfaces did not compose for free: (1) how NEW/MODIFIED/UNCHANGED is decided, and (2) how a document's id is generated.
+
+### Decisions
+
+**1. Database-backed change detection (realises the plan's DL-020 intent).**
+The pipeline computes the file's content hash, derives a deterministic `document_id` from the resolved path, and looks the document up via `document_repo.get_document_by_id`. Classification:
+- no record → **NEW**;
+- record exists, identical `file_hash`, **and** status `COMPLETED` → **UNCHANGED** (skip, `skipped=True`);
+- otherwise → **MODIFIED**.
+`get_document_by_id` is used rather than `get_document_by_hash` because only an identity lookup can distinguish NEW from MODIFIED (a hash lookup returns nothing for *both* a new file and a changed file). This makes detection survive process restarts, fixing the in-memory `ChangeDetector` limitation (DL-007). The in-memory registry is bypassed for the decision.
+
+**2. `ChangeDetector._compute_hash` promoted to public `compute_hash` (approved).**
+The pipeline needs a side-effect-free content hash for `DocumentRecord.file_hash`. `check()`/`register()` were unsuitable (registry-based; `register` mutates state and is contractually "after success"). Rather than duplicate hashing (which DL-006/DL-008 assign to `change_detector.py`), the existing private static method was made public — a visibility promotion in the module that already owns hashing, no behaviour change. Its two internal callers and the existing hash tests were updated to the new name.
+
+**3. Deterministic `document_id` kept private to the pipeline (approved).**
+`_document_id(path) = uuid5(NAMESPACE, resolved_path)`. Path-derived identity keeps a document's id stable across re-ingestions (satisfying the DL-018 assumption) and lets the MODIFIED path realign chunks by index. Deliberately **not** added as a public helper to `domain/document.py`: there is only one consumer today (the pipeline), so per the approved decision it stays private until a second real consumer emerges (YAGNI). It mirrors, but does not yet share code with, `chunk_id`.
+
+**4. FAILED-status contract.**
+The document row is upserted as `PROCESSING` before parsing. The parse→chunk→embed→persist body is wrapped so that **any** exception sets status `FAILED` and re-raises the original error (collaborators already raise domain exceptions, DL-012). Success transitions to `COMPLETED`.
+
+### Scope boundary with Step 7B (flagged for review)
+- The **MODIFIED** branch performs delete-then-insert on **both** stores before re-processing, because `insert_chunks` uses plain `INSERT` and would otherwise hit a primary-key conflict on the deterministic chunk ids — a lesser handling would corrupt data or crash. 7A covers this with a single basic test (deletes happen, then re-insert). The plan's **rigorous** MODIFIED coverage — call-order assertions, orphaned-tail correctness when the new version has fewer chunks, and partial-failure-leaves-FAILED — remains **Step 7B's deliverable**.
+- **UNCHANGED requires `status == COMPLETED`**, so a previously FAILED/partial ingest of identical content is re-processed (classified MODIFIED) rather than incorrectly skipped.
+
+### Consequences
+- Pure orchestration: the pipeline performs no validation/parsing/chunking/embedding/SQL itself; all seven collaborators are constructor-injected → fully mockable.
+- New module `pipeline.py` (`IngestionResult`, `IngestionPipeline`) + `tests/test_pipeline.py` (9 tests, all collaborators mocked, DL-014).
+- Completed modules touched only as approved: `change_detector.py` (hash method promotion) and its existing tests updated for the rename. No other completed module changed.
+- **Known limitation:** path-derived `document_id` treats the *resolved path* as identity — the same content ingested at a different path is a different document (matches the pre-existing `ChangeDetector` keying, so no new assumption).
+- Baseline: **169 tests pass (~1.4s), `ruff check .` clean, `mypy .` clean (44 files).**
+
+---
+
 *Last updated: 3 July 2026*
