@@ -139,12 +139,18 @@ class IngestionPipeline:
             return IngestionResult(document_id, status, chunks_created=0, skipped=True)
 
         if status is ChangeStatus.MODIFIED:
-            # Remove stale chunks from both stores before re-inserting so the
-            # index-based chunk ids cannot leave orphaned tail chunks (DL-018).
-            await self._document_repo.delete_chunks_for_document(document_id)
-            self._vector_repo.delete_for_document(document_id)
+            # Step 7A is detection/orchestration only. Safe re-indexing of a
+            # modified document (delete its existing chunks from both stores,
+            # then re-insert) is implemented in Step 7B. Until then a modified
+            # document is detected and reported but not re-ingested here.
+            logger.info(
+                "Detected modified document %s (%s); re-indexing deferred to Step 7B",
+                document_id,
+                metadata.file_name,
+            )
+            return IngestionResult(document_id, status, chunks_created=0, skipped=True)
 
-        chunks_created = await self._process(document_id, file_path, metadata, file_hash, existing)
+        chunks_created = await self._process(document_id, file_path, metadata, file_hash)
 
         logger.info(
             "Ingested %s as %s (%d chunks)", metadata.file_name, status.value, chunks_created
@@ -157,21 +163,18 @@ class IngestionPipeline:
         file_path: Path,
         metadata: DocumentMetadata,
         file_hash: str,
-        existing: DocumentRecord | None,
     ) -> int:
-        """Parse, chunk, embed, and persist a document; manage its status.
+        """Parse, chunk, embed, and persist a NEW document; manage its status.
 
-        The document row is upserted as PROCESSING first; on success the status
-        becomes COMPLETED, and on any failure it becomes FAILED before the error
-        is re-raised.
+        Only reached for NEW documents in Step 7A. The document row is upserted
+        as PROCESSING first; on success the status becomes COMPLETED, and on any
+        failure it becomes FAILED before the error is re-raised.
 
         Args:
             document_id: The document's stable id.
             file_path: Path to the source file.
             metadata: Extracted file-system metadata (name/extension/size).
             file_hash: SHA-256 content hash of the file.
-            existing: The previously stored record, if any (to preserve
-                ``created_at`` across re-ingestions).
 
         Returns:
             The number of chunks created.
@@ -184,7 +187,7 @@ class IngestionPipeline:
             file_type=metadata.file_extension,
             file_size_bytes=metadata.file_size_bytes,
             status=DocumentStatus.PROCESSING,
-            created_at=existing.created_at if existing else now,
+            created_at=now,
             updated_at=now,
             ingested_at=now,
         )

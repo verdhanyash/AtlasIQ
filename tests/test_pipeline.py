@@ -184,9 +184,10 @@ class TestUnchangedDocument:
         mocks["vector_repo"].store.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_failed_prior_attempt_is_reprocessed_not_skipped(self, tmp_path: Path) -> None:
+    async def test_failed_prior_attempt_classified_modified(self, tmp_path: Path) -> None:
         pipeline, mocks = _build_pipeline()
-        # same hash but previous attempt did not complete → must re-process
+        # same hash but previous attempt did not complete → classified MODIFIED
+        # (not UNCHANGED), so it is not treated as an already-ingested document
         mocks["document_repo"].get_document_by_id = AsyncMock(
             return_value=_existing_record("hash-abc", DocumentStatus.FAILED)
         )
@@ -194,17 +195,16 @@ class TestUnchangedDocument:
         result = await pipeline.ingest(_make_file(tmp_path))
 
         assert result.status is ChangeStatus.MODIFIED
-        assert result.skipped is False
 
 
-# ── MODIFIED (basic; rigorous coverage is Step 7B) ───────────────────────────
+# ── MODIFIED (detection only; re-indexing is Step 7B) ────────────────────────
 
 
 class TestModifiedDocument:
-    """A completed document whose content changed is re-indexed."""
+    """A modified document is detected but not re-indexed in Step 7A."""
 
     @pytest.mark.asyncio
-    async def test_deletes_from_both_stores_before_reinsert(self, tmp_path: Path) -> None:
+    async def test_detected_but_not_reindexed(self, tmp_path: Path) -> None:
         pipeline, mocks = _build_pipeline()
         mocks["document_repo"].get_document_by_id = AsyncMock(
             return_value=_existing_record("old-hash", DocumentStatus.COMPLETED)
@@ -213,10 +213,15 @@ class TestModifiedDocument:
         result = await pipeline.ingest(_make_file(tmp_path))
 
         assert result.status is ChangeStatus.MODIFIED
-        mocks["document_repo"].delete_chunks_for_document.assert_awaited_once()
-        mocks["vector_repo"].delete_for_document.assert_called_once()
-        # and it still re-inserts fresh chunks
-        mocks["document_repo"].insert_chunks.assert_awaited_once()
+        assert result.skipped is True
+        assert result.chunks_created == 0
+        # Step 7A performs no re-indexing work — that is Step 7B's responsibility
+        mocks["document_repo"].delete_chunks_for_document.assert_not_awaited()
+        mocks["vector_repo"].delete_for_document.assert_not_called()
+        mocks["document_repo"].upsert_document.assert_not_awaited()
+        mocks["document_repo"].insert_chunks.assert_not_awaited()
+        mocks["vector_repo"].store.assert_not_called()
+        mocks["parser"].parse.assert_not_called()
 
 
 # ── Failure handling ─────────────────────────────────────────────────────────

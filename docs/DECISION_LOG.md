@@ -903,9 +903,9 @@ The pipeline needs a side-effect-free content hash for `DocumentRecord.file_hash
 **4. FAILED-status contract.**
 The document row is upserted as `PROCESSING` before parsing. The parse→chunk→embed→persist body is wrapped so that **any** exception sets status `FAILED` and re-raises the original error (collaborators already raise domain exceptions, DL-012). Success transitions to `COMPLETED`.
 
-### Scope boundary with Step 7B (flagged for review)
-- The **MODIFIED** branch performs delete-then-insert on **both** stores before re-processing, because `insert_chunks` uses plain `INSERT` and would otherwise hit a primary-key conflict on the deterministic chunk ids — a lesser handling would corrupt data or crash. 7A covers this with a single basic test (deletes happen, then re-insert). The plan's **rigorous** MODIFIED coverage — call-order assertions, orphaned-tail correctness when the new version has fewer chunks, and partial-failure-leaves-FAILED — remains **Step 7B's deliverable**.
-- **UNCHANGED requires `status == COMPLETED`**, so a previously FAILED/partial ingest of identical content is re-processed (classified MODIFIED) rather than incorrectly skipped.
+### Scope boundary with Step 7B
+- Step 7A is **detection/orchestration only**. It fully ingests **NEW** documents and short-circuits **UNCHANGED**. A **MODIFIED** document is *detected and reported* (`status=MODIFIED`, `skipped=True`, `chunks_created=0`) but **not re-indexed** — the delete-then-reinsert on both stores, and its rigorous coverage (call-order, orphaned-tail correctness, partial-failure-leaves-FAILED), are entirely **Step 7B's deliverable**. This keeps the 7A/7B boundary exactly as the execution plan defines it (an earlier draft of 7A performed the delete-then-insert; it was removed to avoid implementing part of 7B).
+- **UNCHANGED requires `status == COMPLETED`**, so a previously FAILED/partial ingest of identical content is classified MODIFIED (and thus handled by 7B) rather than incorrectly skipped as unchanged.
 
 ### Consequences
 - Pure orchestration: the pipeline performs no validation/parsing/chunking/embedding/SQL itself; all seven collaborators are constructor-injected → fully mockable.
