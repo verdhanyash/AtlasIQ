@@ -16,12 +16,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from atlasiq.backend.api.routes_health import router as health_router
+from atlasiq.backend.api.routes_ingestion import router as ingestion_router
 from atlasiq.backend.core.dependencies import (
     get_postgres_client,
     get_qdrant_client,
     get_settings,
 )
-from atlasiq.backend.core.exceptions import AtlasIQError, StartupError
+from atlasiq.backend.core.exceptions import (
+    AtlasIQError,
+    DocumentNotFoundError,
+    DocumentValidationError,
+    StartupError,
+)
 from atlasiq.backend.core.logging import setup_logging
 from atlasiq.backend.core.startup import run_startup_checks
 
@@ -94,6 +100,28 @@ def create_app() -> FastAPI:
 
     # ── Exception Handlers ───────────────────────────────────────────────
 
+    @app.exception_handler(DocumentValidationError)
+    async def validation_error_handler(
+        request: Request, exc: DocumentValidationError
+    ) -> JSONResponse:
+        """Handle document validation errors with 422 Unprocessable Entity."""
+        logger.warning("Validation error: %s", exc.message)
+        return JSONResponse(
+            status_code=422,
+            content={"error": "DocumentValidationError", "message": exc.message},
+        )
+
+    @app.exception_handler(DocumentNotFoundError)
+    async def not_found_error_handler(
+        request: Request, exc: DocumentNotFoundError
+    ) -> JSONResponse:
+        """Handle document-not-found errors with 404 Not Found."""
+        logger.warning("Not found: %s", exc.message)
+        return JSONResponse(
+            status_code=404,
+            content={"error": "DocumentNotFoundError", "message": exc.message},
+        )
+
     @app.exception_handler(AtlasIQError)
     async def atlasiq_error_handler(request: Request, exc: AtlasIQError) -> JSONResponse:
         """Handle all AtlasIQ domain exceptions with structured error responses."""
@@ -115,12 +143,7 @@ def create_app() -> FastAPI:
     # ── Routers ──────────────────────────────────────────────────────────
 
     app.include_router(health_router)
-
-    # Future milestone routers will be registered here:
-    # app.include_router(documents_router, prefix="/documents")
-    # app.include_router(query_router, prefix="/query")
-    # app.include_router(analytics_router, prefix="/analytics")
-    # app.include_router(evaluation_router, prefix="/evaluation")
+    app.include_router(ingestion_router, prefix="/ingest")
 
     return app
 

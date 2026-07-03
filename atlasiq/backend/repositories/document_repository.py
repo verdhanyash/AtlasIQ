@@ -256,6 +256,29 @@ class DocumentRepository:
 
         logger.info("Deleted chunks for document %s", document_id)
 
+    async def count_chunks_for_document(self, document_id: str) -> int:
+        """Count the chunks belonging to a document.
+
+        Args:
+            document_id: The owning document id.
+
+        Returns:
+            The number of chunks stored for the document (0 if none).
+
+        Raises:
+            DatabaseQueryError: If the query fails.
+        """
+        sql = text("SELECT COUNT(*) FROM chunks WHERE document_id = :document_id")
+        try:
+            async with self._client.session_factory() as session:
+                result = await session.execute(sql, {"document_id": document_id})
+                count = result.scalar()
+        except SQLAlchemyError as exc:
+            msg = f"Failed to count chunks for document '{document_id}': {exc}"
+            raise DatabaseQueryError(msg) from exc
+
+        return int(count) if count is not None else 0
+
     async def list_documents(
         self, limit: int = _DEFAULT_LIST_LIMIT, offset: int = 0
     ) -> list[DocumentRecord]:

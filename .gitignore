@@ -221,3 +221,9 @@ __marimo__/
 document_storage/
 watched_documents/
 docs.zip
+
+# Local-only learning/context docs — kept out of the repo
+docs/
+agent.md
+project_context.md
+notes.md

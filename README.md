@@ -270,7 +270,7 @@ curl http://localhost:8000/health
 | Milestone                                 | Status         |
 | ----------------------------------------- | -------------- |
 | Milestone 0 — Foundation                  | ✅ Completed    |
-| Milestone 1 — Document Ingestion Pipeline | 🚧 In Progress |
+| Milestone 1 — Document Ingestion Pipeline | ✅ Completed    |
 | Milestone 2 — Retrieval Pipeline          | ⏳ Planned      |
 | Milestone 3 — Generation Pipeline         | ⏳ Planned      |
 | Milestone 4 — Evaluation & Analytics      | ⏳ Planned      |
@@ -309,10 +309,14 @@ Completed infrastructure includes:
 * ✅ Step 6D: Database Clients (reviewed — documented no-op)
 * ✅ Step 7A: Ingestion Pipeline Orchestrator
 * ✅ Step 7B: Incremental Update Logic (modified-document re-indexing)
+* ✅ Step 8A: Upload API (`POST /ingest/upload`)
+* ✅ Step 8B: Status API (`GET /ingest/status`, `GET /ingest/documents`)
+* ✅ Step 8C: Optional Folder Watcher
+* ✅ Step 9: End-to-End Integration
 
 ### Remaining
 
-* ⏳ Step 8: Ingestion API & Optional Folder Watcher
+* None — Milestone 1 complete.
 
 ## Latest Implementation
 
@@ -344,7 +348,12 @@ Implemented the conductor that wires every ingestion stage into a single `async 
 
 **Status**
 
-✅ Completed and tested — full suite: **169 tests passing**, `ruff` and `mypy --strict` clean.
+✅ Completed and tested — full suite: **190 tests passing**, `ruff` and `mypy --strict` clean.
+
+### Known Limitations (V1)
+
+* **Unauthenticated upload**: `POST /ingest/upload` has no auth layer — authentication is out of V1 scope per PROJECT_SCOPE.
+* **Qdrant `vector_size` / embedding dimension**: these are independent config values; swapping the embedding model requires updating `qdrant.vector_size` in config (DL-026).
 
 
 # Development Roadmap
