@@ -816,4 +816,33 @@ Execute a comprehensive debugging session to resolve all accumulated issues befo
 
 ---
 
-*Last updated: 2 July 2026*
+## DL-025: Qdrant Vector Repository — Ingestion-Write-Only Domain Boundary
+
+**Date:** 3 July 2026
+**Phase:** Milestone 1, Step 6C
+**Status:** Active
+
+### Context
+Chunk vectors live in Qdrant while chunk text/metadata lives in PostgreSQL (DL-018 shared join key). The pipeline needs to store and delete those vectors, but it must not learn Qdrant payload-shaping or import the `qdrant_client` library — that would leak the vector store across the codebase and break the encapsulation rule (only `database/` may import `qdrant_client`).
+
+### Decision
+Add `atlasiq/backend/repositories/vector_repository.py` — a synchronous `ChunkVectorRepository` that wraps the existing `QdrantVectorClient` and speaks in `ChunkRecord` + embedding vectors:
+- `store(chunks, vectors)` — validates `len(chunks) == len(vectors)` (raises `DatabaseQueryError` on mismatch), extracts each `chunk.id` as the point id, builds the minimal payload `{document_id, chunk_index}`, and delegates to `client.upsert_vectors`.
+- `delete_for_document(document_id)` — delegates to `client.delete_by_document_id`.
+
+Payload keys are module constants (`_PAYLOAD_DOCUMENT_ID`, `_PAYLOAD_CHUNK_INDEX`); `document_id` deliberately matches the key `QdrantVectorClient.delete_by_document_id` filters on.
+
+### Rationale
+- **Ingestion-write-only for M1**: similarity search / retrieval is deferred to Milestone 2 (YAGNI). This repository only stores and deletes.
+- **Encapsulation**: the repository never imports `qdrant_client`; the import stays behind the `database/` boundary. Consequently, **driver-error wrapping is intentionally *not* done here** — catching Qdrant exceptions would require importing the library's exception types. That hardening belongs to `QdrantVectorClient` and is Step 6D's concern. The only error this repository raises is the domain-level length-mismatch (`DatabaseQueryError`, DL-012).
+- **Deterministic ids as join key**: reusing `chunk.id` (DL-018) as the Qdrant point id keeps PostgreSQL and Qdrant correlated and makes upserts idempotent.
+
+### Consequences
+- `store([], [])` is a no-op (mirrors `DocumentRepository.insert_chunks`), avoiding empty client calls.
+- Tests mock `QdrantVectorClient` entirely — no Qdrant, no network (DL-014): 7 tests covering id alignment, vector pass-through, payload shape, length-mismatch, empty no-op, delete delegation.
+- Baseline after this step: **160 tests pass (~1.4s), `ruff check .` clean, `mypy .` clean (42 files).**
+- Note: the plan's reserved id "DL-019 (vector repo)" collided with the already-used DL-019; recorded here as DL-025 instead.
+
+---
+
+*Last updated: 3 July 2026*
