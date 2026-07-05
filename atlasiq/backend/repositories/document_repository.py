@@ -279,6 +279,64 @@ class DocumentRepository:
 
         return int(count) if count is not None else 0
 
+    async def get_chunks_by_ids(self, chunk_ids: list[str]) -> list[ChunkRecord]:
+        """Fetch chunks by their ids, preserving the requested order.
+
+        Used to hydrate retrieval results: a retriever returns ranked chunk ids,
+        and this method resolves them to full chunk records (content + pages) for
+        prompting and citation. The returned list follows the order of
+        ``chunk_ids`` (not the arbitrary order the database returns), so the
+        retrieval ranking is preserved. Ids with no matching row are dropped.
+
+        Args:
+            chunk_ids: The chunk ids to fetch, in ranked order. Empty is a no-op.
+
+        Returns:
+            The matching :class:`ChunkRecord` objects in ``chunk_ids`` order.
+
+        Raises:
+            DatabaseQueryError: If the query fails.
+        """
+        if not chunk_ids:
+            return []
+
+        sql = text("SELECT * FROM chunks WHERE id = ANY(:ids)")
+        try:
+            async with self._client.session_factory() as session:
+                result = await session.execute(sql, {"ids": chunk_ids})
+                rows = result.mappings().all()
+        except SQLAlchemyError as exc:
+            msg = f"Failed to fetch chunks by ids: {exc}"
+            raise DatabaseQueryError(msg) from exc
+
+        by_id = {row["id"]: self._row_to_chunk(row) for row in rows}
+        return [by_id[chunk_id] for chunk_id in chunk_ids if chunk_id in by_id]
+
+    async def list_all_chunks(self) -> list[ChunkRecord]:
+        """Fetch every chunk in the store, ordered by document then position.
+
+        Used to build the in-memory BM25 lexical index over the whole corpus.
+        For the focused V1 corpus this is a cheap full read; it is intentionally
+        not paginated.
+
+        Returns:
+            All :class:`ChunkRecord` objects, ordered by ``document_id`` then
+            ``chunk_index``.
+
+        Raises:
+            DatabaseQueryError: If the query fails.
+        """
+        sql = text("SELECT * FROM chunks ORDER BY document_id, chunk_index")
+        try:
+            async with self._client.session_factory() as session:
+                result = await session.execute(sql)
+                rows = result.mappings().all()
+        except SQLAlchemyError as exc:
+            msg = f"Failed to list all chunks: {exc}"
+            raise DatabaseQueryError(msg) from exc
+
+        return [self._row_to_chunk(row) for row in rows]
+
     async def list_documents(
         self, limit: int = _DEFAULT_LIST_LIMIT, offset: int = 0
     ) -> list[DocumentRecord]:
@@ -331,4 +389,37 @@ class DocumentRepository:
             created_at=row["created_at"],
             updated_at=row["updated_at"],
             ingested_at=row["ingested_at"],
+        )
+
+    @staticmethod
+    def _row_to_chunk(row: RowMapping) -> ChunkRecord:
+        """Map a database row mapping to a :class:`ChunkRecord`.
+
+        The ``metadata_json`` JSONB column may come back either already decoded
+        to a ``dict`` or as a raw JSON ``str`` depending on the driver codec, so
+        both are handled defensively.
+
+        Args:
+            row: A SQLAlchemy row mapping from the ``chunks`` table.
+
+        Returns:
+            The reconstructed domain record.
+        """
+        raw_metadata = row["metadata_json"]
+        if isinstance(raw_metadata, str):
+            metadata = json.loads(raw_metadata) if raw_metadata else {}
+        elif isinstance(raw_metadata, dict):
+            metadata = raw_metadata
+        else:
+            metadata = {}
+
+        return ChunkRecord(
+            id=row["id"],
+            document_id=row["document_id"],
+            chunk_index=row["chunk_index"],
+            content=row["content"],
+            token_count=row["token_count"],
+            start_page=row["start_page"],
+            end_page=row["end_page"],
+            metadata=metadata,
         )

@@ -331,3 +331,125 @@ class TestListDocuments:
 
         with pytest.raises(DatabaseQueryError, match="Failed to list documents"):
             await repo.list_documents()
+
+
+# ── get_chunks_by_ids / list_all_chunks (M2-1) ───────────────────────────────
+
+
+def _sample_chunk_row(
+    chunk_id_value: str,
+    chunk_index: int = 0,
+    metadata_json: Any = None,
+) -> dict[str, Any]:
+    return {
+        "id": chunk_id_value,
+        "document_id": "doc-1",
+        "chunk_index": chunk_index,
+        "content": f"content {chunk_index}",
+        "token_count": 10,
+        "start_page": 1,
+        "end_page": 1,
+        "metadata_json": metadata_json if metadata_json is not None else {},
+    }
+
+
+class TestGetChunksByIds:
+    """Tests for get_chunks_by_ids."""
+
+    @pytest.mark.asyncio
+    async def test_empty_ids_is_noop(self) -> None:
+        session = _make_session()
+        repo = DocumentRepository(_make_client(session))
+
+        result = await repo.get_chunks_by_ids([])
+
+        assert result == []
+        session.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_preserves_requested_order(self) -> None:
+        # DB returns rows in arbitrary order; the method must reorder to match
+        # the requested id order (which carries the retrieval ranking).
+        rows = [
+            _sample_chunk_row("c-2", 2),
+            _sample_chunk_row("c-0", 0),
+            _sample_chunk_row("c-1", 1),
+        ]
+        session = _make_session(_FakeResult(rows))
+        repo = DocumentRepository(_make_client(session))
+
+        chunks = await repo.get_chunks_by_ids(["c-0", "c-1", "c-2"])
+
+        assert [c.id for c in chunks] == ["c-0", "c-1", "c-2"]
+        _, params = session.execute.await_args.args
+        assert params["ids"] == ["c-0", "c-1", "c-2"]
+
+    @pytest.mark.asyncio
+    async def test_drops_missing_ids(self) -> None:
+        session = _make_session(_FakeResult([_sample_chunk_row("c-0", 0)]))
+        repo = DocumentRepository(_make_client(session))
+
+        chunks = await repo.get_chunks_by_ids(["c-0", "missing"])
+
+        assert [c.id for c in chunks] == ["c-0"]
+
+    @pytest.mark.asyncio
+    async def test_parses_metadata_from_json_string(self) -> None:
+        row = _sample_chunk_row("c-0", 0, metadata_json='{"section": "intro"}')
+        session = _make_session(_FakeResult([row]))
+        repo = DocumentRepository(_make_client(session))
+
+        chunks = await repo.get_chunks_by_ids(["c-0"])
+
+        assert chunks[0].metadata == {"section": "intro"}
+
+    @pytest.mark.asyncio
+    async def test_parses_metadata_from_dict(self) -> None:
+        row = _sample_chunk_row("c-0", 0, metadata_json={"section": "intro"})
+        session = _make_session(_FakeResult([row]))
+        repo = DocumentRepository(_make_client(session))
+
+        chunks = await repo.get_chunks_by_ids(["c-0"])
+
+        assert chunks[0].metadata == {"section": "intro"}
+
+    @pytest.mark.asyncio
+    async def test_wraps_driver_error(self) -> None:
+        session = _make_session()
+        session.execute.side_effect = SQLAlchemyError("boom")
+        repo = DocumentRepository(_make_client(session))
+
+        with pytest.raises(DatabaseQueryError, match="Failed to fetch chunks by ids"):
+            await repo.get_chunks_by_ids(["c-0"])
+
+
+class TestListAllChunks:
+    """Tests for list_all_chunks."""
+
+    @pytest.mark.asyncio
+    async def test_maps_all_rows(self) -> None:
+        rows = [_sample_chunk_row("c-0", 0), _sample_chunk_row("c-1", 1)]
+        session = _make_session(_FakeResult(rows))
+        repo = DocumentRepository(_make_client(session))
+
+        chunks = await repo.list_all_chunks()
+
+        assert len(chunks) == 2
+        assert all(isinstance(c, ChunkRecord) for c in chunks)
+        assert chunks[0].content == "content 0"
+
+    @pytest.mark.asyncio
+    async def test_empty_corpus_returns_empty(self) -> None:
+        session = _make_session(_FakeResult([]))
+        repo = DocumentRepository(_make_client(session))
+
+        assert await repo.list_all_chunks() == []
+
+    @pytest.mark.asyncio
+    async def test_wraps_driver_error(self) -> None:
+        session = _make_session()
+        session.execute.side_effect = SQLAlchemyError("boom")
+        repo = DocumentRepository(_make_client(session))
+
+        with pytest.raises(DatabaseQueryError, match="Failed to list all chunks"):
+            await repo.list_all_chunks()

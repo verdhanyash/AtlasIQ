@@ -271,7 +271,7 @@ curl http://localhost:8000/health
 | ----------------------------------------- | -------------- |
 | Milestone 0 — Foundation                  | ✅ Completed    |
 | Milestone 1 — Document Ingestion Pipeline | ✅ Completed    |
-| Milestone 2 — Retrieval Pipeline          | ⏳ Planned      |
+| Milestone 2 — Retrieval & Generation      | 🚧 In Progress |
 | Milestone 3 — Generation Pipeline         | ⏳ Planned      |
 | Milestone 4 — Evaluation & Analytics      | ⏳ Planned      |
 
@@ -318,11 +318,53 @@ Completed infrastructure includes:
 
 * None — Milestone 1 complete.
 
+---
+
+## 🚧 Milestone 2 — Retrieval & Generation Pipeline (AskMyBook)
+
+### Completed
+
+* ✅ M2-1: Retrieval Models & Repository Reads (`ScoredChunkRef`, `RetrievedChunk`, chunk hydration reads)
+* ✅ M2-2: Query Embedding (reuses the existing embedder's `search_query:` path)
+* ✅ M2-3: Dense Retriever (semantic search over Qdrant)
+
+### Remaining
+
+* ⏳ M2-4: BM25 Sparse Retriever
+* ⏳ M2-5: Hybrid Retriever (Reciprocal Rank Fusion)
+* ⏳ M2-6: Prompt Builder
+* ⏳ M2-7: LLM Provider (Ollama + NVIDIA)
+* ⏳ M2-8: Answer Generator
+* ⏳ M2-9: Citation Builder
+* ⏳ M2-10: Guardrails
+* ⏳ M2-11: Query Pipeline
+* ⏳ M2-12: Query API
+* ⏳ M2-13: Streamlit UI
+* ⏳ M2-14: Evaluation Framework
+* ⏳ M2-15: Compare Two Documents
+
 ## Latest Implementation
 
-### Step 7A/7B — Ingestion Pipeline Orchestrator + Incremental Re-Indexing
+### M2-3 — Dense Retriever
 
-Implemented the conductor that wires every ingestion stage into a single `async ingest(path)` flow: **Validator → Change Detector → Parser → Chunker → Embedder → PostgreSQL + Qdrant repositories**, including safe re-indexing of modified documents.
+Implemented semantic retrieval over Qdrant as the first Milestone 2 component, verified in isolation before any pipeline wiring.
+
+**Highlights**
+
+* Embeds the query with the shared embedder (`search_query:` prefix) and searches Qdrant for the nearest chunk vectors.
+* Returns lightweight `ScoredChunkRef`s (chunk id + score + document coordinates); chunk text/pages are hydrated from PostgreSQL — the Qdrant payload stays minimal (retrieval → hydration boundary).
+* Dependency-injected (Qdrant client + embedder + config-driven top-k); wraps Qdrant/driver failures in `RetrievalError` without leaking the vector library.
+* 8 unit tests (fully mocked) plus a dev-only manual smoke script (`scripts/smoke_retrieval.py`) for eyeballing real retrieval quality before the LLM stage.
+
+**Status**
+
+✅ Completed and tested — full suite: **216 tests passing**, `ruff` and `mypy --strict` clean.
+
+---
+
+### Milestone 1 recap — Ingestion Pipeline Orchestrator + Incremental Re-Indexing
+
+The conductor wires every ingestion stage into a single `async ingest(path)` flow: **Validator → Change Detector → Parser → Chunker → Embedder → PostgreSQL + Qdrant repositories**, including safe re-indexing of modified documents.
 
 **Highlights**
 
