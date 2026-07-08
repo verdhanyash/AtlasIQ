@@ -9,7 +9,7 @@
 - **Student Name:** Yash Verdhan Parihar
 - **Segment:** Foundations of Applied Machine Learning
 - **Problem Statement Code:** I2 (Document Q&A — RAG over a Focused Corpus)
-- **Status:** Milestone 0 (Foundation) Completed & Deployed locally
+- **Status:** Milestone 1 (Document Ingestion Pipeline) complete; Milestone 2 (Retrieval & Generation) in progress
 - **GitHub Repository:** [verdhanyash/AtlasIQ](https://github.com/verdhanyash/AtlasIQ)
 - **Initial Design Doc:** [docs/design_doc.md](docs/design_doc.md)
 
