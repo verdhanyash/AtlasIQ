@@ -99,13 +99,30 @@ class DocumentParser:
         """
         if self._converter is None:
             try:
-                from docling.document_converter import DocumentConverter
+                from docling.datamodel.base_models import InputFormat
+                from docling.datamodel.pipeline_options import PdfPipelineOptions
+                from docling.document_converter import (
+                    DocumentConverter,
+                    PdfFormatOption,
+                )
             except ImportError as exc:
                 msg = (
                     "IBM Docling is required for PDF/DOCX parsing. "
                     "Install it with: pip install docling"
                 )
                 raise DocumentParsingError(msg) from exc
-            self._converter = DocumentConverter()
-            logger.info("Docling DocumentConverter initialised")
+
+            # Disable OCR: AtlasIQ targets digital documents that already have a
+            # real text layer (textbooks, papers, reports). OCR pulls in heavy,
+            # environment-fragile engines (e.g. PaddleOCR) that aren't needed for
+            # text-based PDFs and can fail to initialise. Scanned-image support
+            # would be a separate, opt-in concern.
+            pdf_options = PdfPipelineOptions()
+            pdf_options.do_ocr = False
+            self._converter = DocumentConverter(
+                format_options={
+                    InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)
+                }
+            )
+            logger.info("Docling DocumentConverter initialised (OCR disabled)")
         return self._converter

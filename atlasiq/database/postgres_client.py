@@ -62,7 +62,7 @@ class PostgresClient:
             msg = f"Schema file not found at {SCHEMA_PATH}"
             raise DatabaseConnectionError(msg)
 
-        schema_sql = SCHEMA_PATH.read_text()
+        schema_sql = SCHEMA_PATH.read_text(encoding="utf-8")
         async with self.engine.begin() as conn:
             # Execute each statement separately since asyncpg doesn't support
             # multiple statements in a single execute call

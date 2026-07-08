@@ -38,7 +38,7 @@ def _load_yaml_config(path: Path) -> dict[str, Any]:
         logger.warning("Config file not found at %s, using defaults", path)
         return {}
 
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     return data if isinstance(data, dict) else {}
