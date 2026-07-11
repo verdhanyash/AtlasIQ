@@ -328,10 +328,10 @@ Completed infrastructure includes:
 * ✅ M2-2: Query Embedding (reuses the existing embedder's `search_query:` path)
 * ✅ M2-3: Dense Retriever (semantic search over Qdrant)
 * ✅ M2-4: BM25 Sparse Retriever (in-memory lexical index)
+* ✅ M2-5: Hybrid Retriever (Reciprocal Rank Fusion)
 
 ### Remaining
 
-* ⏳ M2-5: Hybrid Retriever (Reciprocal Rank Fusion)
 * ⏳ M2-6: Prompt Builder
 * ⏳ M2-7: LLM Provider (Ollama + NVIDIA)
 * ⏳ M2-8: Answer Generator
@@ -345,22 +345,23 @@ Completed infrastructure includes:
 
 ## Latest Implementation
 
-### M2-3 — Dense Retriever
+### M2-5 — Hybrid Retriever (Reciprocal Rank Fusion)
 
-Implemented semantic retrieval over Qdrant as the first Milestone 2 component, verified in isolation before any pipeline wiring.
+Fuses the dense (semantic) and BM25 (lexical) retrievers into one ranked list, completing the retrieval stack (M2-1 → M2-5).
 
 **Highlights**
 
-* Embeds the query with the shared embedder (`search_query:` prefix) and searches Qdrant for the nearest chunk vectors.
-* Returns lightweight `ScoredChunkRef`s (chunk id + score + document coordinates); chunk text/pages are hydrated from PostgreSQL — the Qdrant payload stays minimal (retrieval → hydration boundary).
-* Dependency-injected (Qdrant client + embedder + config-driven top-k); wraps Qdrant/driver failures in `RetrievalError` without leaking the vector library.
-* 8 unit tests (fully mocked) plus a dev-only manual smoke script (`scripts/smoke_retrieval.py`) for eyeballing real retrieval quality before the LLM stage.
+* **Reciprocal Rank Fusion** combines results by rank position, not raw score — so incomparable scales (cosine similarity vs BM25) merge fairly: `rrf_score = Σ 1/(rrf_k + rank)`.
+* Depends on a **`Retriever` protocol**, not concrete classes (Dependency Inversion). Accepts a `Sequence[Retriever]`, so future retrievers (reranking, ColBERT/SPLADE, ...) plug in without modifying the fusion engine.
+* Fusion isolated in a dedicated `_fuse_rrf` helper; deterministic ordering by `(-rrf_score, document_id, chunk_index)`; deduplicates chunks across retrievers.
+* Each retriever keeps its own candidate pool; the hybrid only fuses and applies the final `top_k`. Fail-fast on an empty retriever list.
+* 11 offline unit tests (exact RRF scoring, dedup, overlap boosting, deterministic tie-breaks, N-retriever generalisation), plus the `scripts/smoke_retrieval.py` dev tool now printing DENSE / BM25 / HYBRID side by side.
 
 **Status**
 
-✅ Completed and tested — full suite: **216 tests passing**, `ruff` and `mypy --strict` clean.
+✅ Completed and tested — full suite: **241 tests passing**, `ruff` and `mypy --strict` clean.
 
-**Verified end-to-end (live):** a real 813 KB PDF financial report was ingested via the folder-watcher drop → validate → parse (Docling, OCR disabled) → chunk (470 chunks) → embed (nomic-embed-text-v1.5) → store (PostgreSQL + Qdrant), after which dense retrieval returned relevant, correctly-scored chunks from the live datastores.
+**Verified end-to-end (live):** a real 813 KB PDF financial report was ingested via the folder-watcher drop → parse (Docling, OCR disabled) → chunk (470) → embed (nomic-embed-text-v1.5) → store (PostgreSQL + Qdrant), after which retrieval returned relevant, correctly-scored chunks from the live datastores.
 
 ---
 
