@@ -327,10 +327,10 @@ Completed infrastructure includes:
 * ✅ M2-1: Retrieval Models & Repository Reads (`ScoredChunkRef`, `RetrievedChunk`, chunk hydration reads)
 * ✅ M2-2: Query Embedding (reuses the existing embedder's `search_query:` path)
 * ✅ M2-3: Dense Retriever (semantic search over Qdrant)
+* ✅ M2-4: BM25 Sparse Retriever (in-memory lexical index)
 
 ### Remaining
 
-* ⏳ M2-4: BM25 Sparse Retriever
 * ⏳ M2-5: Hybrid Retriever (Reciprocal Rank Fusion)
 * ⏳ M2-6: Prompt Builder
 * ⏳ M2-7: LLM Provider (Ollama + NVIDIA)
