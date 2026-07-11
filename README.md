@@ -360,6 +360,8 @@ Implemented semantic retrieval over Qdrant as the first Milestone 2 component, v
 
 ✅ Completed and tested — full suite: **216 tests passing**, `ruff` and `mypy --strict` clean.
 
+**Verified end-to-end (live):** a real 813 KB PDF financial report was ingested via the folder-watcher drop → validate → parse (Docling, OCR disabled) → chunk (470 chunks) → embed (nomic-embed-text-v1.5) → store (PostgreSQL + Qdrant), after which dense retrieval returned relevant, correctly-scored chunks from the live datastores.
+
 ---
 
 ### Milestone 1 recap — Ingestion Pipeline Orchestrator + Incremental Re-Indexing
