@@ -155,28 +155,127 @@ flowchart TB
 
 # Project Structure
 
+# AtlasIQ Project Structure
+
 ```text
-AtlasIQ/
-├── atlasiq/
-│   ├── backend/
-│   │   ├── api/            # FastAPI routes (health, ingestion, query)
-│   │   ├── core/           # config, dependencies, exceptions, logging, startup
-│   │   ├── domain/         # framework-independent records (DocumentRecord, ChunkRecord)
-│   │   └── repositories/   # DocumentRepository (PostgreSQL), ChunkVectorRepository (Qdrant)
-│   ├── ingestion/          # validator, parser, chunker, embedder, change_detector,
-│   │                       #   metadata, pipeline, watcher
-│   ├── retrieval/          # models, protocols, dense / BM25 / hybrid retrievers
-│   ├── evaluation/         # evaluation framework (planned)
-│   ├── analytics/          # query analytics (planned)
-│   └── database/           # PostgresClient, QdrantVectorClient, schema.sql
-├── tests/                  # offline unit + integration tests (mocked I/O)
-├── scripts/                # dev tools (smoke_retrieval, run_watcher)
-├── configs/                # default.yaml
-├── prompts/                # qa / citation / system prompt templates
-├── docker-compose.yml      # PostgreSQL + Qdrant + app
-├── Dockerfile
-├── pyproject.toml
-└── README.md
+atlasiq/
+├── backend/
+│   ├── main.py
+│   │   └── FastAPI app factory, lifespan management, and global error handlers
+│   │
+│   ├── api/
+│   │   ├── routes_health.py
+│   │   │   └── GET /health — checks PostgreSQL and Qdrant connectivity
+│   │   │
+│   │   └── routes_ingestion.py
+│   │       └── POST /ingest/upload
+│   │       └── GET /ingest/status
+│   │       └── GET /documents
+│   │
+│   ├── core/
+│   │   ├── config.py
+│   │   │   └── Pydantic settings loaded from YAML and environment variables
+│   │   │
+│   │   ├── dependencies.py
+│   │   │   └── Dependency Injection providers (clients, repositories, pipeline)
+│   │   │
+│   │   ├── exceptions.py
+│   │   │   └── Domain exception hierarchy (AtlasIQError, etc.)
+│   │   │
+│   │   ├── logging.py
+│   │   │   └── Structured JSON logging configuration
+│   │   │
+│   │   └── startup.py
+│   │       └── Fail-fast startup validation (PostgreSQL & Qdrant connectivity)
+│   │
+│   ├── domain/
+│   │   ├── document.py
+│   │   │   └── DocumentRecord and DocumentStatus enum
+│   │   │
+│   │   └── chunk.py
+│   │       └── ChunkRecord and deterministic chunk_id() generation
+│   │
+│   ├── repositories/
+│   │   ├── document_repository.py
+│   │   │   └── SQL operations for documents and chunks tables
+│   │   │
+│   │   └── vector_repository.py
+│   │       └── Qdrant vector insert, update, and delete operations
+│   │
+│   ├── models/
+│   │   └── Reserved for future Pydantic API schemas
+│   │
+│   └── services/
+│       └── Reserved for future business services (intentionally empty in V1)
+│
+├── database/
+│   ├── postgres_client.py
+│   │   └── Async engine, sessions, schema initialization, health checks
+│   │
+│   ├── qdrant_client.py
+│   │   └── Collection management, vector upsert/search/delete
+│   │
+│   └── schema.sql
+│       └── Database schema
+│           ├── documents
+│           ├── chunks
+│           ├── query_history
+│           └── eval_results
+│
+├── ingestion/
+│   ├── validator.py
+│   │   └── Reject unsupported, oversized, or missing files
+│   │
+│   ├── metadata.py
+│   │   └── Extract filesystem metadata (name, size, extension)
+│   │
+│   ├── change_detector.py
+│   │   └── SHA-256 hashing and NEW / MODIFIED / UNCHANGED detection
+│   │
+│   ├── parser.py
+│   │   └── Docling parsing (PDF/DOCX) and direct Markdown/Text reading
+│   │
+│   ├── chunker.py
+│   │   └── Recursive text chunking with overlap
+│   │
+│   ├── embedder.py
+│   │   └── Local nomic-embed-text-v1.5 embedding generation (lazy-loaded)
+│   │
+│   ├── pipeline.py
+│   │   └── IngestionPipeline orchestrator (Milestone 1)
+│   │
+│   └── watcher.py
+│       └── Optional debounced folder watcher
+│
+├── retrieval/
+│   ├── models.py
+│   │   └── ScoredChunkRef and RetrievedChunk value objects
+│   │
+│   ├── protocols.py
+│   │   └── Retriever Protocol (common retrieval interface)
+│   │
+│   ├── dense_retriever.py
+│   │   └── Semantic vector retrieval using Qdrant
+│   │
+│   ├── bm25_retriever.py
+│   │   └── In-memory lexical retrieval using Okapi BM25
+│   │
+│   └── hybrid_retriever.py
+│       └── Reciprocal Rank Fusion (RRF) over multiple retrievers
+│
+├── analytics/
+│   └── Reserved for future analytics features
+│
+├── evaluation/
+│   └── Reserved for evaluation framework (future milestone)
+│
+└── scripts/
+    ├── smoke_retrieval.py
+    │   └── Developer utility to compare Dense, BM25, and Hybrid retrieval
+    │
+    └── run_watcher.py
+        └── Developer utility to run the folder watcher
+```
 ```
 
 ---
