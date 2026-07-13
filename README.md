@@ -4,58 +4,13 @@
 
 ---
 
-## 📋 Week 1 Submission Info
+## 📋 Project Info
 
 - **Student Name:** Yash Verdhan Parihar
 - **Segment:** Foundations of Applied Machine Learning
 - **Problem Statement Code:** I2 (Document Q&A — RAG over a Focused Corpus)
-- **Status:** Milestone 1 (Document Ingestion Pipeline) complete; Milestone 2 (Retrieval & Generation) in progress
+- **Status:** Milestone 1 complete; Milestone 2 (Retrieval & Generation) in progress
 - **GitHub Repository:** [verdhanyash/AtlasIQ](https://github.com/verdhanyash/AtlasIQ)
-- **Initial Design Doc:** [docs/design_doc.md](docs/design_doc.md)
-
----
-
-## 🔍 Week 1 Submission Checklist
-
-- [x] **Repo created and public:** [verdhanyash/AtlasIQ](https://github.com/verdhanyash/AtlasIQ)
-- [x] **README.md configured** with project name, tagline, metadata, and learnings.
-- [x] **Initial Design Doc (1 page):** Embedded/linked as [docs/design_doc.md](docs/design_doc.md).
-- [x] **Tech stack table:** Completed with `Component | Choice | Why (one line)` (see below).
-- [x] **Data layer working:** Verified via postgres/qdrant startup logs and health status checks (see below).
-- [x] **At least 5 GitHub commits** on the main branch.
-- [x] **A "What I learned" note** (3-5 bullet points) included in README.
-
----
-
-## 📈 Week 1 Status One-Pager
-
-### What's Done
-- Scaffolded modular repository structure, configured Pydantic settings loading from `configs/default.yaml` with environment variable overrides.
-- Implemented robust structured JSON logging, custom domain exception handlers, and fail-fast startup checks.
-- Implemented async PostgreSQL client and database schema initialization (`schema.sql`).
-- Implemented async Qdrant client with automatic collection creation (768-dim, cosine distance).
-- Created multi-stage Docker environment running FastAPI, PostgreSQL, and Qdrant.
-- Verified system status with a functional `/health` check endpoint.
-
-### What's Stuck
-- None. All Milestone 0 foundation tasks are complete and running successfully.
-
-### 3 Goals for Next Week
-1. Build `validator.py` and `parser.py` (IBM Docling integration) to convert raw files into structured Markdown.
-2. Implement hash-based `change_detector.py` for incremental indexing to prevent duplicate processing.
-3. Build the Upload API (`POST /ingest/upload`) as the primary ingestion entry point and orchestrate the full ingestion pipeline. Folder watcher is optional for local/enterprise use.
-
-### One thing I'd like help from my mentor on
-- Best practices for chunking strategies (handling tables and headings in Docling) and optimizing inference batch sizes when running sentence-transformers locally.
-
----
-
-## 🧠 What I Learned This Week (Week 1)
-
-1. **Pydantic Settings Precedence Gotcha**: Instantiating nested Pydantic settings using explicit constructor arguments (like `config_cls(**yaml_dict)`) overrides environmental variables in Pydantic v2. To preserve env var overrides, I had to clean the incoming YAML dictionary by checking if the matching environment variable (`ATLASIQ_<SECTION>__<KEY>`) was present in `os.environ` and filtering out those keys before instantiation.
-2. **Container Healthcheck Limitations**: Minimal Docker images like `qdrant/qdrant` often strip utilities like `curl` or `wget`. Rather than introducing wrapper builds, a robust and zero-dependency alternative is to check `/proc/net/tcp` for the hexadecimal representation of the port (`18BD` for `6333`) in listening state (`0A`).
-3. **Clean Architecture in FastAPI**: Enforcing strict inward-pointing dependencies (routers only handle routing, services handle business logic, repositories handle DB/Qdrant clients) makes the backend extremely modular and testable, avoiding the spaghetti imports common in simple RAG tutorials.
-4. **Multi-Stage Docker Builds**: Separating the build stage (compiling packages, installing heavy ML libraries) from the runtime stage shrinks the final image footprint significantly and prevents unnecessary build utilities from cluttering the production container.
 
 ---
 
@@ -125,57 +80,75 @@ The goal is to build a platform that can evolve into an enterprise knowledge sys
 
 # System Architecture
 
-```text
-                                  ┌────────────────────────────┐
-                                  │           User             │
-                                  └─────────────┬──────────────┘
-                                                │
-                                       Natural Language Query
-                                          or Document Upload
-                                                │
-                                                ▼
-                           ┌─────────────────────────────────────┐
-                           │      Streamlit User Interface       │
-                           │ Upload • Search • Analytics • Eval  │
-                           └─────────────────┬───────────────────┘
-                                             │
-                                             ▼
-                            ┌──────────────────────────────────┐
-                            │         FastAPI Backend          │
-                            └───────┬───────────┬──────────────┘
-                                    │           │
-                     ┌──────────────┘           └──────────────┐
-                     ▼                                         ▼
-      Ingestion Sources                              Query Processing
-             │                                               │
-    ┌────────┴────────┐                           ┌──────────┴──────────┐
-    │                 │                           │                     │
-    ▼                 ▼                           ▼                     ▼
-Upload API     Folder Watcher             Hybrid Retrieval        Query Logger
-(Primary)      (Optional)                 (Dense + BM25)                │
-    │                 │                           │                    ▼
-    └────────┬────────┘                           ▼              PostgreSQL
-             │                               Reranker            (Analytics)
-             ▼                                    │
-   Shared Ingestion Pipeline                      ▼
-             │                             Prompt Builder
-    ┌────────┴────────────┐                       │
-    │                     │                       ▼
-    ▼                     ▼              LLM Provider Interface
-Validator          Change Detector                │
-    │                     │                       ▼
-    ▼                     │        Answer + Citations + Confidence
-  Parser                  │
-    │                     │
-    ▼                     │
-Chunking Engine           │
-    │                     │
-    ▼                     │
-Embedding Model           │
-    │                     │
-    ▼                     ▼
-  Qdrant            Metadata Engine
-  Vector DB         (SHA-256 Hash → PostgreSQL)
+> Legend: 🟢 implemented · 🟡 in progress · 🔴 planned · 🔵 storage
+
+```mermaid
+flowchart TB
+    User([User])
+
+    subgraph EntryPoints["Ingestion Sources"]
+        UploadAPI["POST /ingest/upload"]
+        FolderWatcher["Folder Watcher<br/>(watched_documents/)"]
+    end
+
+    subgraph QueryEntry["Query Interface"]
+        StreamlitUI["Streamlit UI (M2-13)"]
+        QueryAPI["POST /query (M2-12)"]
+    end
+
+    User -->|upload / drop| EntryPoints
+    User -->|ask question| StreamlitUI --> QueryAPI
+
+    subgraph Ingestion["Ingestion Pipeline — Milestone 1"]
+        direction TB
+        Validator["1 Validator"] --> Metadata["2 Metadata"]
+        Metadata --> ChangeDetect["3 Change Detector<br/>(SHA-256)"]
+        ChangeDetect -->|NEW / MODIFIED| Parser["4 Parser (Docling)"]
+        ChangeDetect -->|UNCHANGED| Skip([skip])
+        Parser --> Chunker["5 Chunker"] --> Embedder["6 Embedder<br/>(nomic-embed)"]
+    end
+
+    UploadAPI --> Validator
+    FolderWatcher -->|debounced| Validator
+
+    subgraph Storage["Storage Layer"]
+        direction LR
+        PostgreSQL[("PostgreSQL<br/>documents · chunks")]
+        Qdrant[("Qdrant<br/>768-dim vectors")]
+    end
+
+    Embedder -->|text + metadata| PostgreSQL
+    Embedder -->|vectors| Qdrant
+
+    subgraph Retrieval["Retrieval &amp; Generation — Milestone 2"]
+        direction TB
+        QEmbed["Query Embed"] --> Dense["Dense Retriever"] & BM25["BM25 Retriever"]
+        Dense --> Hybrid["Hybrid Retriever (RRF)"]
+        BM25 --> Hybrid
+        Hybrid --> Hydrate["Hydrate from PostgreSQL"]
+        Hydrate --> Prompt["Prompt Builder (M2-6)"]
+        Prompt --> LLM["LLM Provider<br/>Ollama / NVIDIA (M2-7)"]
+        LLM --> Gen["Answer Generator (M2-8)"]
+        Gen --> Cite["Citation Builder (M2-9)"]
+        Cite --> Guard["Guardrails (M2-10)"]
+    end
+
+    QueryAPI --> QEmbed
+    Dense -.->|vector search| Qdrant
+    BM25 -.->|corpus at startup| PostgreSQL
+    Hydrate -.->|get_chunks_by_ids| PostgreSQL
+    Guard -->|answer + citations + confidence| StreamlitUI
+    Guard -->|weak evidence| Refusal["'I don't know'"] --> StreamlitUI
+
+    classDef done fill:#d4edda,stroke:#28a745,color:#000
+    classDef wip fill:#fff3cd,stroke:#ffc107,color:#000
+    classDef planned fill:#f8d7da,stroke:#dc3545,color:#000
+    classDef store fill:#cce5ff,stroke:#004085,color:#000
+
+    class Validator,Metadata,ChangeDetect,Parser,Chunker,Embedder,QEmbed,Dense,BM25,Hybrid done
+    class Hydrate,Prompt,LLM,Gen,Cite,Guard,QueryAPI,StreamlitUI wip
+    class Refusal planned
+    class PostgreSQL,Qdrant store
 ```
 
 ---
@@ -183,24 +156,26 @@ Embedding Model           │
 # Project Structure
 
 ```text
-atlasiq/
-
-├── backend/
-├── frontend/
-├── ingestion/
-├── retrieval/
-├── evaluation/
-├── analytics/
-├── database/
-├── tests/
-├── docs/
-│   ├── architecture.md
-│   ├── srs.md
-│   ├── api-design.md
-│   ├── roadmap.md
-│   └── decisions.md
-├── docker-compose.yml
-├── .env.example
+AtlasIQ/
+├── atlasiq/
+│   ├── backend/
+│   │   ├── api/            # FastAPI routes (health, ingestion, query)
+│   │   ├── core/           # config, dependencies, exceptions, logging, startup
+│   │   ├── domain/         # framework-independent records (DocumentRecord, ChunkRecord)
+│   │   └── repositories/   # DocumentRepository (PostgreSQL), ChunkVectorRepository (Qdrant)
+│   ├── ingestion/          # validator, parser, chunker, embedder, change_detector,
+│   │                       #   metadata, pipeline, watcher
+│   ├── retrieval/          # models, protocols, dense / BM25 / hybrid retrievers
+│   ├── evaluation/         # evaluation framework (planned)
+│   ├── analytics/          # query analytics (planned)
+│   └── database/           # PostgresClient, QdrantVectorClient, schema.sql
+├── tests/                  # offline unit + integration tests (mocked I/O)
+├── scripts/                # dev tools (smoke_retrieval, run_watcher)
+├── configs/                # default.yaml
+├── prompts/                # qa / citation / system prompt templates
+├── docker-compose.yml      # PostgreSQL + Qdrant + app
+├── Dockerfile
+├── pyproject.toml
 └── README.md
 ```
 
