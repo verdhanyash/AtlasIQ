@@ -303,10 +303,10 @@ Completed infrastructure includes:
 * ✅ M2-3: Dense Retriever (semantic search over Qdrant)
 * ✅ M2-4: BM25 Sparse Retriever (in-memory lexical index)
 * ✅ M2-5: Hybrid Retriever (Reciprocal Rank Fusion)
+* ✅ M2-6: Prompt Builder (grounded QA prompt construction)
 
 ### Remaining
 
-* ⏳ M2-6: Prompt Builder
 * ⏳ M2-7: LLM Provider (Ollama + NVIDIA)
 * ⏳ M2-8: Answer Generator
 * ⏳ M2-9: Citation Builder
