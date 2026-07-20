@@ -133,6 +133,7 @@ class RetrievalConfig(BaseSettings):
     hybrid_top_k: int = 20
     rerank_top_k: int = 5
     rrf_k: int = 60
+    min_confidence_score: float = 0.1
 
 
 class RerankerConfig(BaseSettings):
