@@ -110,7 +110,8 @@ class QueryPipeline:
         if not normalized_question:
             raise ValueError("Question cannot be empty.")
 
-        logger.info("Starting query pipeline for question: %s", normalized_question)
+        logger.info("Starting query pipeline")
+        logger.debug("Starting query pipeline (%d characters)", len(normalized_question))
 
         # Step 1: Retrieve ranked chunk references
         scored_refs = self._hybrid_retriever.retrieve(normalized_question)

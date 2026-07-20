@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 
 from atlasiq.backend.api.routes_health import router as health_router
 from atlasiq.backend.api.routes_ingestion import router as ingestion_router
+from atlasiq.backend.api.routes_query import router as query_router
 from atlasiq.backend.core.dependencies import (
     get_postgres_client,
     get_qdrant_client,
@@ -26,6 +27,9 @@ from atlasiq.backend.core.exceptions import (
     AtlasIQError,
     DocumentNotFoundError,
     DocumentValidationError,
+    LLMProviderError,
+    PromptTemplateError,
+    RetrievalError,
     StartupError,
 )
 from atlasiq.backend.core.logging import setup_logging
@@ -122,6 +126,39 @@ def create_app() -> FastAPI:
             content={"error": "DocumentNotFoundError", "message": exc.message},
         )
 
+    @app.exception_handler(RetrievalError)
+    async def retrieval_error_handler(
+        request: Request, exc: RetrievalError
+    ) -> JSONResponse:
+        """Handle retrieval pipeline errors with 503 Service Unavailable."""
+        logger.error("Retrieval error: %s", exc.message)
+        return JSONResponse(
+            status_code=503,
+            content={"error": "RetrievalError", "message": exc.message},
+        )
+
+    @app.exception_handler(LLMProviderError)
+    async def llm_provider_error_handler(
+        request: Request, exc: LLMProviderError
+    ) -> JSONResponse:
+        """Handle LLM provider errors with 502 Bad Gateway."""
+        logger.error("LLM provider error: %s", exc.message)
+        return JSONResponse(
+            status_code=502,
+            content={"error": "LLMProviderError", "message": exc.message},
+        )
+
+    @app.exception_handler(PromptTemplateError)
+    async def prompt_template_error_handler(
+        request: Request, exc: PromptTemplateError
+    ) -> JSONResponse:
+        """Handle prompt template errors with 500 Internal Server Error."""
+        logger.error("Prompt template error: %s", exc.message)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "PromptTemplateError", "message": exc.message},
+        )
+
     @app.exception_handler(AtlasIQError)
     async def atlasiq_error_handler(request: Request, exc: AtlasIQError) -> JSONResponse:
         """Handle all AtlasIQ domain exceptions with structured error responses."""
@@ -144,6 +181,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(ingestion_router, prefix="/ingest")
+    app.include_router(query_router)
 
     return app
 

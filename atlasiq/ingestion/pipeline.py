@@ -154,6 +154,11 @@ class IngestionPipeline:
         logger.info(
             "Ingested %s as %s (%d chunks)", metadata.file_name, status.value, chunks_created
         )
+
+        from atlasiq.backend.core.dependencies import invalidate_bm25_retriever
+
+        await invalidate_bm25_retriever()
+
         return IngestionResult(document_id, status, chunks_created, skipped=False)
 
     async def _process(
