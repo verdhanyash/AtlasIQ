@@ -1,10 +1,8 @@
 # AtlasIQ Frontend
 
-## New Standalone Frontend (Recommended)
+The AtlasIQ frontend is a pure HTML/CSS/JavaScript application that implements the Liquid Glass design system.
 
-The new frontend is a single-file HTML/CSS/JavaScript application that matches the Stitch design exactly.
-
-### Quick Start
+## Quick Start
 
 **From project root:**
 ```bash
@@ -15,38 +13,26 @@ python -m uvicorn atlasiq.backend.main:app --host 0.0.0.0 --port 8000 --reload
 # In another terminal, start frontend
 python atlasiq/frontend/serve.py
 
-# Open browser to http://localhost:8501
-```
-
-**OR use the startup script:**
-```bash
-# Double-click START_ATLASIQ.bat in project root
-# Opens two terminals automatically and launches browser
+# Open browser to http://localhost:8502
 ```
 
 ### Files
 
 - **`static/index.html`** - Complete frontend application
-- **`serve.py`** - Simple HTTP server (port 8501)
-- **`app.py`** - Old Streamlit app (deprecated)
+- **`static/logo.png`** - AtlasIQ logo
+- **`serve.py`** - Simple HTTP server (port 8502)
 
 ### Features
 
 ✅ **Zero Latency** - No page reloads, instant interactions
-✅ **Exact Stitch Design** - Matches design mockups perfectly
+✅ **Liquid Glass Design** - Glassmorphic aesthetic with animations
 ✅ **Three States**: Empty (home), Loading (shimmer), Results (citations)
-✅ **Glassmorphic UI** - Liquid Glass aesthetic with animations
 ✅ **Backend Integration** - Connects to FastAPI `/query` endpoint
+✅ **File Upload** - Drag & drop or browse document upload
+✅ **Collections View** - Browse indexed documents
+✅ **LLM Settings** - Configure provider (Ollama, NVIDIA, OpenAI, Anthropic)
 
 ### Documentation
 
 See `docs/NEW_FRONTEND_GUIDE.md` for complete documentation.
 
-## Old Streamlit Frontend (Deprecated)
-
-The Streamlit app (`app.py`) is deprecated due to:
-- Full page reruns causing latency
-- Cannot achieve exact Stitch design
-- Limited customization options
-
-Use the new standalone frontend instead.

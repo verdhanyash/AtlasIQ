@@ -69,7 +69,6 @@ atlasiq/
 │   └── main.py              # FastAPI backend
 └── frontend/
     ├── serve.py             # ✅ Correct frontend server (HTML/CSS/JS)
-    ├── app.py               # ❌ Old Streamlit version (not used)
     └── static/
         ├── index.html       # ✅ Main UI file
         └── logo.png         # ✅ Logo image

@@ -4,12 +4,32 @@
 
 ---
 
+## 🚀 Quick Start
+
+**Backend:** `START_BACKEND.bat` or manually:
+```bash
+.venv\Scripts\activate
+python -m uvicorn atlasiq.backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**Frontend:** `START_FRONTEND.bat` or manually:
+```bash
+cd atlasiq/frontend/static
+python -m http.server 8502
+```
+
+**Open:** http://localhost:8502
+
+📖 **See [QUICK_START.md](QUICK_START.md) for detailed instructions**
+
+---
+
 ## 📋 Project Info
 
 - **Student Name:** Yash Verdhan Parihar
 - **Segment:** Foundations of Applied Machine Learning
 - **Problem Statement Code:** I2 (Document Q&A — RAG over a Focused Corpus)
-- **Status:** Milestone 1 complete; Milestone 2 (Retrieval & Generation) in progress
+- **Status:** Milestone 2 complete with new Stitch-design UI
 - **GitHub Repository:** [verdhanyash/AtlasIQ](https://github.com/verdhanyash/AtlasIQ)
 
 ---
@@ -92,12 +112,12 @@ flowchart TB
     end
 
     subgraph QueryEntry["Query Interface"]
-        StreamlitUI["Streamlit UI (M2-13)"]
+        FrontendUI["HTML/CSS/JS Frontend"]
         QueryAPI["POST /query (M2-12)"]
     end
 
     User -->|upload / drop| EntryPoints
-    User -->|ask question| StreamlitUI --> QueryAPI
+    User -->|ask question| FrontendUI --> QueryAPI
 
     subgraph Ingestion["Ingestion Pipeline — Milestone 1"]
         direction TB
@@ -137,8 +157,8 @@ flowchart TB
     Dense -.->|vector search| Qdrant
     BM25 -.->|corpus at startup| PostgreSQL
     Hydrate -.->|get_chunks_by_ids| PostgreSQL
-    Guard -->|answer + citations + confidence| StreamlitUI
-    Guard -->|weak evidence| Refusal["'I don't know'"] --> StreamlitUI
+    Guard -->|answer + citations + confidence| FrontendUI
+    Guard -->|weak evidence| Refusal["'I don't know'"] --> FrontendUI
 
     classDef done fill:#d4edda,stroke:#28a745,color:#000
     classDef wip fill:#fff3cd,stroke:#ffc107,color:#000
@@ -146,7 +166,7 @@ flowchart TB
     classDef store fill:#cce5ff,stroke:#004085,color:#000
 
     class Validator,Metadata,ChangeDetect,Parser,Chunker,Embedder,QEmbed,Dense,BM25,Hybrid done
-    class Hydrate,Prompt,LLM,Gen,Cite,Guard,QueryAPI,StreamlitUI wip
+    class Hydrate,Prompt,LLM,Gen,Cite,Guard,QueryAPI,FrontendUI wip
     class Refusal planned
     class PostgreSQL,Qdrant store
 ```
@@ -185,7 +205,7 @@ AtlasIQ/
 | Layer            | Technology                      | Why (one line) |
 | ---------------- | ------------------------------- | -------------- |
 | Backend          | FastAPI                         | Async, fast, supports automatic OpenAPI docs and dependency injection. |
-| Frontend         | Streamlit                       | Lightweight UI engine for building search, analytics, and evaluation dashboards. |
+| Frontend         | HTML/CSS/JavaScript             | Pure web frontend with Liquid Glass design, zero latency, served via Python HTTP server. |
 | Database         | PostgreSQL                      | Stores structured document metadata, query logs, analytics, and evaluations. |
 | Vector Database  | Qdrant                          | High-performance vector search engine supporting payload filters for dense retrieval. |
 | Retrieval        | Hybrid Retrieval (Dense + BM25) | Combines semantic vector matching with term-based keyword search for high recall. |
@@ -313,7 +333,7 @@ Completed infrastructure includes:
 * ⏳ M2-10: Guardrails
 * ⏳ M2-11: Query Pipeline
 * ⏳ M2-12: Query API
-* ⏳ M2-13: Streamlit UI
+* ⏳ M2-13: HTML/CSS/JS Frontend
 * ⏳ M2-14: Evaluation Framework
 * ⏳ M2-15: Compare Two Documents
 
