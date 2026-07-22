@@ -1,180 +1,90 @@
-# AtlasIQ Quick Start - HTML/CSS/JS Frontend
+# 🚀 Quick Start - AtlasIQ
 
-## ✅ What's Available
+## Start the Project (One Command)
 
-AtlasIQ uses a pure **HTML/CSS/JavaScript frontend** that implements the Liquid Glass design system:
+```bash
+cd C:\Users\yashv\Desktop\AtlasIQ
+.venv\Scripts\python.exe start_atlasiq.py
+```
 
-- ✅ **Zero latency** - No page reloads, instant interactions
-- ✅ **Glassmorphic UI** - Liquid Glass aesthetic with proper animations
-- ✅ **Three states**: Empty (home with examples), Loading (skeleton shimmer), Results (with citations)
-- ✅ **Backend integration** - Connects to FastAPI backend
+This single command:
+- ✅ Checks port availability (8000, 8502)
+- ✅ Starts backend (FastAPI on port 8000)
+- ✅ Starts frontend (HTTP server on port 8502)
+- ✅ Displays URLs and status
+- ✅ Press **Ctrl+C** to stop both services
 
-## 🚀 How to Start
+## Access AtlasIQ
 
-### Option 1: Manual Start (Recommended First Time)
+Once started, open your browser:
+
+- **Frontend UI:** http://localhost:8502
+- **Backend API:** http://localhost:8000/docs
+- **Health Check:** http://localhost:8000/health
+
+## Why This Works Better
+
+**Before:** Batch files + background processes = unreliable on Windows
+
+**Now:** Single Python script that:
+- Manages both processes properly
+- Handles graceful shutdown
+- Checks for port conflicts
+- Shows clear status messages
+
+## Troubleshooting
+
+### Port Already in Use?
+
+```bash
+# Check what's using port 8000 or 8502
+netstat -ano | findstr :8000
+netstat -ano | findstr :8502
+
+# Kill the process
+taskkill /PID <PID> /F
+```
+
+### Virtual Environment Missing?
+
+```bash
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+```
+
+### Backend Won't Start?
+
+Check:
+- PostgreSQL is running (port 5433)
+- Qdrant is running (port 6333)
+- `.env` file exists with proper configuration
+
+## Manual Start (Two Terminals)
+
+If you prefer manual control:
 
 **Terminal 1 - Backend:**
 ```bash
 cd C:\Users\yashv\Desktop\AtlasIQ
 .venv\Scripts\activate
-python -m uvicorn atlasiq.backend.main:app --host 0.0.0.0 --port 8000 --reload
+.venv\Scripts\uvicorn.exe atlasiq.backend.main:app --host 0.0.0.0 --port 8000
 ```
 
 **Terminal 2 - Frontend:**
 ```bash
 cd C:\Users\yashv\Desktop\AtlasIQ
 .venv\Scripts\activate
-python atlasiq/frontend/serve.py
+python -m atlasiq.frontend.serve
 ```
 
-**Then open your browser to:**
-```
-http://localhost:8502
-```
+## What to Test
 
-### Option 2: Automatic Start (Use Later)
+1. **Upload a document** (PDF, DOCX, TXT, MD)
+2. **Query:** "What is [document] about?"
+3. **Check citations** - Should be accurate and relevant
+4. **Confidence score** - Should show 20-95% (not 1-3%)
+5. **Retrieval details** - Scroll down to see technical breakdown
 
-Double-click `START_ATLASIQ.bat` in the project root - it will:
-1. Start backend on port 8000
-2. Start frontend on port 8502
-3. Open your browser automatically
+---
 
-## 📁 Frontend Files
-
-```
-atlasiq/
-├── frontend/
-│   ├── static/
-│   │   ├── index.html          ← Main frontend (complete app in one file)
-│   │   └── logo.png            ← AtlasIQ logo
-│   ├── serve.py                ← Simple HTTP server script
-│   ├── README.md               ← Frontend documentation
-│   └── __init__.py             ← Package init
-├── docs/
-│   └── NEW_FRONTEND_GUIDE.md   ← Complete documentation
-└── START_ATLASIQ.bat           ← Startup script (optional)
-```
-
-## 🎨 Features
-
-### Home State (Empty)
-- Hero text: "How can I help you today?"
-- Large glassmorphic search input
-- 4 example cards:
-  - **Finance**: "What is the projected revenue for Q4?"
-  - **Analysis**: "Summarize the market analysis report."
-  - **Legal**: "Review the termination clauses in current vendor contracts."
-  - **Strategy**: "Identify cross-departmental synergy opportunities."
-- Click any card to auto-search
-
-### Loading State
-- Animated glowing border on search input
-- Bouncing dots: "Retrieving evidence..."
-- Skeleton shimmer animation
-- Smooth transitions
-
-###Results State
-- **Confidence badge**: High/Medium/Low with color coding
-- **Answer**: Formatted text with inline citation superscripts [1], [2]
-- **Citations grid**: 3-column layout with:
-  - Index badge
-  - Document title
-  - Text excerpt
-  - Relevance score
-- **Response time**: Shows query execution time
-- **New search button**: Click to start over
-
-### Sidebar (240px Fixed)
-- AtlasIQ branding
-- Navigation: Document Library, Collections, Settings, User Profile
-- Upload button at bottom
-- Glassmorphic styling
-
-### Top Bar
-- System status (checks backend health)
-- Notifications and help icons
-
-## 🎯 Current Status
-
-### ✅ Backend Running
-- Port: 8000
-- Status: **HEALTHY**
-- All endpoints working
-- Database: Connected
-- Vector store: Connected
-
-### ⚠️ Frontend Setup Needed
-The frontend files are ready, but you need to start the server:
-
-```bash
-cd C:\Users\yashv\Desktop\AtlasIQ
-.venv\Scripts\activate
-python atlasiq/frontend/serve.py
-```
-
-Then open: http://localhost:8502
-
-## 🔧 Troubleshooting
-
-### Backend not responding
-```bash
-# Check if running
-curl http://localhost:8000/health
-
-# If not, start it
-.venv\Scripts\activate
-python -m uvicorn atlasiq.backend.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### Frontend won't load
-```bash
-# Make sure you're in the project root
-cd C:\Users\yashv\Desktop\AtlasIQ
-
-# Activate virtual environment
-.venv\Scripts\activate
-
-# Start the frontend server
-python atlasiq/frontend/serve.py
-
-# Open browser to http://localhost:8502
-```
-
-### Port already in use
-If port 8502 is busy, edit `atlasiq/frontend/serve.py` and change the PORT variable to a different port (e.g., 8503).
-
-### Search not working
-- Open browser console (F12) to see errors
-- Verify backend is running: http://localhost:8000/health
-- Check CORS headers (should be enabled)
-
-## 📖 Documentation
-
-- **NEW_FRONTEND_GUIDE.md** - Complete frontend documentation
-- **atlasiq/frontend/README.md** - Frontend-specific readme
-- **Stitch_design/** - Original design mockups
-
-## 🔄 What's Included
-
-- **Backend** - No changes, all APIs work as before
-- **Database** - PostgreSQL unchanged
-- **Vector store** - Qdrant unchanged
-- **RAG pipeline** - All retrieval logic unchanged
-- **Document ingestion** - Works the same
-
-The frontend is pure HTML/CSS/JS served via Python HTTP server!
-
-## 🎬 Next Steps
-
-1. **Start the frontend** (see instructions above)
-2. **Test the UI** - Try the example queries
-3. **Upload documents** (feature coming soon in UI, use API for now)
-4. **Enjoy the new design!** 🎉
-
-## 📞 Need Help?
-
-Check these in order:
-1. Browser console (F12) for JavaScript errors
-2. Backend logs for API errors
-3. NEW_FRONTEND_GUIDE.md for detailed docs
-4. This file for quick fixes
+**For full documentation:** See `START_PROJECT.md`

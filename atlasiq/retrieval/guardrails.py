@@ -121,7 +121,30 @@ class Guardrails:
 
         # Compute confidence from chunk distribution and quality
         confidence = self._compute_confidence(chunks)
+
+        # CRITICAL CHECK: LLM Refusal Detection
+        # If LLM explicitly refuses to answer, cap confidence at 20%
+        # This prevents showing high confidence when the LLM knows the answer is weak
+        refusal_phrases = [
+            "don't have enough information",
+            "cannot answer",
+            "unable to answer",
+            "don't know",
+            "not enough information",
+            "insufficient information",
+            "available documents",
+        ]
         
+        answer_lower = generated_answer.lower()
+        llm_refused = any(phrase in answer_lower for phrase in refusal_phrases)
+        
+        if llm_refused:
+            logger.debug(
+                "LLM refusal detected in answer → capping confidence at 20%%"
+            )
+            # LLM explicitly refused → very low confidence regardless of retrieval patterns
+            confidence = min(confidence, 0.20)
+
         # For minimum threshold check, use top RRF score as proxy for retrieval quality
         # (separate from user-facing confidence which uses heuristics)
         top_rrf_score = max(chunk.score for chunk in chunks)
@@ -162,9 +185,10 @@ class Guardrails:
         """Compute a normalized confidence score from retrieved chunks.
 
         In V1, confidence is computed using heuristics based on:
-        1. Document diversity (fewer unique docs = more focused = higher confidence)
-        2. Number of supporting chunks (more chunks from same doc = higher confidence)
-        3. Score distribution (how concentrated are top scores)
+        1. **Absolute retrieval quality** (are top scores strong enough?)
+        2. Document diversity (fewer unique docs = more focused = higher confidence)
+        3. Number of supporting chunks (more chunks from same doc = higher confidence)
+        4. Score distribution (how concentrated are top scores)
 
         This approach avoids the pitfall of treating RRF scores (which represent
         relative ranking, not absolute confidence) as confidence measures. RRF
@@ -183,6 +207,23 @@ class Guardrails:
         """
         if not chunks:
             return 0.0
+
+        # CRITICAL CHECK: Absolute retrieval quality
+        # If top RRF scores are too low, the retrieval is weak regardless of patterns
+        top_score = chunks[0].score if chunks else 0.0
+        
+        # Typical strong matches: RRF score > 0.025 (chunk appears high in both retrievers)
+        # Weak matches: RRF score < 0.018 (chunk only in one retriever or low-ranked)
+        # THRESHOLD: If top score < 0.020, cap confidence at 25% (weak retrieval)
+        if top_score < 0.020:
+            logger.debug(
+                "Weak retrieval quality: top RRF score %.6f < 0.020 → capping confidence at 25%%",
+                top_score
+            )
+            # Still compute relative patterns, but cap maximum confidence
+            max_confidence_cap = 0.25
+        else:
+            max_confidence_cap = 1.0
 
         # Analyze top-5 chunks for confidence signals
         top_chunks = list(chunks[:5])
@@ -212,7 +253,7 @@ class Guardrails:
         scores = [chunk.score for chunk in chunks[:min(10, len(chunks))]]
         top_score = scores[0]
         avg_score = sum(scores) / len(scores)
-        
+
         # If top score is much higher than average, retrieval is confident
         # Typical RRF: top ~0.016, avg ~0.013 → ratio ~1.23
         # Strong retrieval: top ~0.030, avg ~0.016 → ratio ~1.88
@@ -239,5 +280,8 @@ class Guardrails:
         else:
             # Low confidence: scattered retrieval or weak evidence
             confidence = base_confidence * 0.55  # Maps 0.0-0.45 → 0.0-0.25
+
+        # Apply absolute quality cap (prevents high confidence on weak retrieval)
+        confidence = min(confidence, max_confidence_cap)
 
         return max(0.0, min(1.0, confidence))

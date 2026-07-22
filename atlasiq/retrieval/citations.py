@@ -91,7 +91,7 @@ class CitationBuilder:
     No LLM calls, no external dependencies — pure deterministic assembly.
     """
 
-    def build(self, chunks: Sequence[RetrievedChunk]) -> list[Citation]:
+    def build(self, chunks: Sequence[RetrievedChunk], top_k: int = 10) -> list[Citation]:
         """Build citations from the retrieved chunks.
 
         The chunks are deduplicated by ``(filename, page)`` — if multiple chunks
@@ -103,10 +103,18 @@ class CitationBuilder:
         ``(document, page)`` pair in the input, even when a later chunk wins
         the dedup (higher score).
 
+        **Filtering**: Only the top-k highest-scoring chunks are considered for
+        citation building. This prevents low-ranked, weakly-related chunks from
+        appearing as citations. Default top_k=10 means only rank 1-10 chunks
+        can be cited.
+
         Args:
             chunks: The hydrated retrieved chunks (the same ones shown to the
                 LLM in the prompt context). Typically pre-sorted by score
                 descending, but the builder handles any order.
+            top_k: Maximum number of top-ranked chunks to consider for citations.
+                Lower-ranked chunks (beyond top_k) are excluded from citations
+                even if they were part of the retrieval context. Default 10.
 
         Returns:
             A list of ``Citation`` objects, deduplicated, preserving the order
@@ -116,13 +124,30 @@ class CitationBuilder:
             logger.debug("No chunks to cite — returning empty citation list")
             return []
 
-        logger.debug("Building citations from %d chunk(s)", len(chunks))
+        # Filter to only top-k highest-scoring chunks for citation
+        # This prevents weakly-related chunks from being cited
+        top_chunks = sorted(chunks, key=lambda c: c.score, reverse=True)[:top_k]
+        
+        logger.debug("Building citations from %d chunk(s) (filtered to top %d)", len(chunks), len(top_chunks))
+
+        # DIAGNOSTIC: Log top chunks being considered for citation
+        logger.debug("CITATION BUILDER INPUT (top %d):", len(top_chunks))
+        for idx, chunk in enumerate(top_chunks):
+            key = _dedup_key(chunk)
+            logger.debug(
+                "  CITE_IN[%d]: file=%s, page=%s, chunk_idx=%d, score=%.6f",
+                idx,
+                chunk.filename,
+                _format_page_range(chunk.chunk.start_page, chunk.chunk.end_page),
+                chunk.chunk.chunk_index,
+                chunk.score,
+            )
 
         # Track best chunk per (filename, page) and first appearance index
         best_chunk: dict[tuple[str, str], RetrievedChunk] = {}
         first_seen: dict[tuple[str, str], int] = {}
 
-        for idx, chunk in enumerate(chunks):
+        for idx, chunk in enumerate(top_chunks):
             key = _dedup_key(chunk)
             # Track first occurrence
             if key not in first_seen:
@@ -145,5 +170,5 @@ class CitationBuilder:
                 )
             )
 
-        logger.info("Built %d citation(s) from %d chunk(s)", len(citations), len(chunks))
+        logger.info("Built %d citation(s) from top %d of %d chunk(s)", len(citations), len(top_chunks), len(chunks))
         return citations
