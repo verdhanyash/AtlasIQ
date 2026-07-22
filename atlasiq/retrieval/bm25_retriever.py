@@ -28,22 +28,36 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Tokenizer shared by corpus and query: lowercase, split on word characters.
-# Deliberately simple (no stemming/stopwords/lemmatisation) — BM25's IDF already
-# down-weights common terms, and richer NLP is out of V1 scope (YAGNI).
+# Common English stop words to filter out of BM25 index.
+# These are high-frequency words that rarely carry semantic meaning and cause
+# false lexical matches (e.g., "India" in "Distribution: India, China" should not
+# match queries about "president of india" when other context words don't match).
+# This is a minimal curated list focused on reducing false positives while
+# preserving legitimate keyword searches.
+_STOP_WORDS = frozenset({
+    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
+    "has", "he", "in", "is", "it", "its", "of", "on", "that", "the",
+    "to", "was", "will", "with", "the", "this", "but", "they", "have",
+    "had", "what", "when", "where", "who", "which", "why", "how",
+})
+
+# Tokenizer shared by corpus and query: lowercase, split on word characters,
+# filter common stop words. BM25's IDF still handles term frequency, but
+# removing stop words prevents spurious matches on high-frequency function words.
 _TOKEN_PATTERN = re.compile(r"\w+")
 
 
 def _tokenize(text: str) -> list[str]:
-    """Tokenize text into lowercase word tokens.
+    """Tokenize text into lowercase word tokens, filtering stop words.
 
     Args:
         text: The text to tokenize.
 
     Returns:
-        A list of lowercase ``\\w+`` tokens.
+        A list of lowercase ``\\w+`` tokens with common stop words removed.
     """
-    return _TOKEN_PATTERN.findall(text.lower())
+    tokens = _TOKEN_PATTERN.findall(text.lower())
+    return [t for t in tokens if t not in _STOP_WORDS]
 
 
 class BM25Retriever:

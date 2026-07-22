@@ -41,11 +41,15 @@ class Citation:
         page: Human-readable page reference (e.g. ``"12"``, ``"12-14"``,
             or ``"N/A"`` for non-paginated sources).
         quote: The supporting passage from the chunk content.
+        chunk_index: Zero-based chunk index within the document.
+        score: Retrieval score (RRF or final relevance score).
     """
 
     document_name: str
     page: str
     quote: str
+    chunk_index: int
+    score: float
 
 
 def _format_page_range(start_page: int | None, end_page: int | None) -> str:
@@ -126,7 +130,12 @@ class CitationBuilder:
 
         # Filter to only top-k highest-scoring chunks for citation
         # This prevents weakly-related chunks from being cited
-        top_chunks = sorted(chunks, key=lambda c: c.score, reverse=True)[:top_k]
+        # Step 1: Identify top-k by score
+        top_k_chunks_by_score = sorted(chunks, key=lambda c: c.score, reverse=True)[:top_k]
+        top_k_ids = {c.chunk.id for c in top_k_chunks_by_score}
+        
+        # Step 2: Filter original list preserving input order
+        top_chunks = [c for c in chunks if c.chunk.id in top_k_ids]
         
         logger.debug("Building citations from %d chunk(s) (filtered to top %d)", len(chunks), len(top_chunks))
 
@@ -167,6 +176,8 @@ class CitationBuilder:
                     document_name=chunk.filename,
                     page=page_ref,
                     quote=chunk.chunk.content.strip(),
+                    chunk_index=chunk.chunk.chunk_index,
+                    score=chunk.score,
                 )
             )
 

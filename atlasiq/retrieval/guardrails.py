@@ -212,12 +212,12 @@ class Guardrails:
         # If top RRF scores are too low, the retrieval is weak regardless of patterns
         top_score = chunks[0].score if chunks else 0.0
         
-        # Typical strong matches: RRF score > 0.025 (chunk appears high in both retrievers)
-        # Weak matches: RRF score < 0.018 (chunk only in one retriever or low-ranked)
-        # THRESHOLD: If top score < 0.020, cap confidence at 25% (weak retrieval)
-        if top_score < 0.020:
+        # Typical strong matches: RRF score > 0.018 (chunk appears high in both retrievers)
+        # Weak matches: RRF score < 0.013 (chunk only in one retriever or low-ranked)
+        # THRESHOLD: If top score < 0.015, cap confidence at 25% (weak retrieval)
+        if top_score < 0.015:
             logger.debug(
-                "Weak retrieval quality: top RRF score %.6f < 0.020 → capping confidence at 25%%",
+                "Weak retrieval quality: top RRF score %.6f < 0.015 → capping confidence at 25%%",
                 top_score
             )
             # Still compute relative patterns, but cap maximum confidence

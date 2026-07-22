@@ -58,26 +58,48 @@ class TestCitationDataclass:
     """Tests for the :class:`Citation` value object."""
 
     def test_fields(self) -> None:
-        """Citation has document_name, page, and quote fields."""
+        """Citation has document_name, page, quote, chunk_index, and score fields."""
         citation = Citation(
-            document_name="report.pdf", page="12", quote="Evidence text."
+            document_name="report.pdf",
+            page="12",
+            quote="Evidence text.",
+            chunk_index=5,
+            score=0.95,
         )
         assert citation.document_name == "report.pdf"
         assert citation.page == "12"
         assert citation.quote == "Evidence text."
+        assert citation.chunk_index == 5
+        assert citation.score == 0.95
 
     def test_frozen_immutability(self) -> None:
         """Citation is frozen (fields cannot be mutated after creation)."""
         citation = Citation(
-            document_name="doc.pdf", page="5", quote="Some text."
+            document_name="doc.pdf",
+            page="5",
+            quote="Some text.",
+            chunk_index=0,
+            score=0.5,
         )
         with pytest.raises(AttributeError):
             citation.document_name = "other.pdf"  # type: ignore[misc]
 
     def test_equality(self) -> None:
         """Two citations with identical values are equal."""
-        c1 = Citation(document_name="a.pdf", page="1", quote="text")
-        c2 = Citation(document_name="a.pdf", page="1", quote="text")
+        c1 = Citation(
+            document_name="a.pdf",
+            page="1",
+            quote="text",
+            chunk_index=0,
+            score=0.8,
+        )
+        c2 = Citation(
+            document_name="a.pdf",
+            page="1",
+            quote="text",
+            chunk_index=0,
+            score=0.8,
+        )
         assert c1 == c2
 
 

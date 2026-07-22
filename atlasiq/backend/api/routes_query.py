@@ -47,6 +47,8 @@ class CitationModel(BaseModel):
     document_name: str = Field(..., description="The name of the source document.")
     page: str = Field(..., description="The page number or page range.")
     quote: str = Field(..., description="The quoted passage from the document.")
+    chunk_index: int = Field(..., description="Zero-based chunk index within the document.")
+    score: float = Field(..., description="Retrieval relevance score (RRF or final score).")
 
 
 class QueryAPIResponse(BaseModel):
@@ -86,6 +88,8 @@ async def query_question(
                 document_name=c.document_name,
                 page=c.page,
                 quote=c.quote,
+                chunk_index=c.chunk_index,
+                score=c.score,
             )
             for c in response.citations
         ],
