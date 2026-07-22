@@ -119,16 +119,20 @@ class Guardrails:
                 refusal_reason="no_retrieval_results",
             )
 
-        # Confidence is derived from the top retrieval score (highest relevance)
-        top_score = max(chunk.score for chunk in chunks)
-        confidence = self._compute_confidence(top_score)
+        # Compute confidence from chunk distribution and quality
+        confidence = self._compute_confidence(chunks)
+        
+        # For minimum threshold check, use top RRF score as proxy for retrieval quality
+        # (separate from user-facing confidence which uses heuristics)
+        top_rrf_score = max(chunk.score for chunk in chunks)
 
-        if top_score < self._min_confidence_score:
-            # Top score below threshold → weak evidence refusal
+        if top_rrf_score < self._min_confidence_score:
+            # Top RRF score below threshold → weak evidence refusal
             logger.info(
-                "Guardrail refusal: top score %.3f < threshold %.3f (weak evidence)",
-                top_score,
+                "Guardrail refusal: top RRF score %.4f < threshold %.2f (weak evidence), computed confidence=%.2f",
+                top_rrf_score,
                 self._min_confidence_score,
+                confidence,
             )
             return GuardrailDecision(
                 passed=False,
@@ -140,8 +144,8 @@ class Guardrails:
 
         # Evidence sufficient → pass with generated answer and citations
         logger.info(
-            "Guardrail passed: top score %.3f >= threshold %.3f (confidence=%.2f)",
-            top_score,
+            "Guardrail passed: top RRF score %.4f >= threshold %.2f, confidence=%.2f",
+            top_rrf_score,
             self._min_confidence_score,
             confidence,
         )
@@ -154,17 +158,86 @@ class Guardrails:
         )
 
     @staticmethod
-    def _compute_confidence(top_score: float) -> float:
-        """Compute a normalised confidence score from the top retrieval score.
+    def _compute_confidence(chunks: Sequence[RetrievedChunk]) -> float:
+        """Compute a normalized confidence score from retrieved chunks.
 
-        In V1, confidence is simply the top score clamped to [0.0, 1.0].
-        Future versions may apply more sophisticated scoring (e.g., incorporating
-        score distribution, citation count, or LLM uncertainty).
+        In V1, confidence is computed using heuristics based on:
+        1. Document diversity (fewer unique docs = more focused = higher confidence)
+        2. Number of supporting chunks (more chunks from same doc = higher confidence)
+        3. Score distribution (how concentrated are top scores)
+
+        This approach avoids the pitfall of treating RRF scores (which represent
+        relative ranking, not absolute confidence) as confidence measures. RRF
+        scores range from ~0.016 (rank 1) to ~0.012 (rank 20) with rrf_k=60,
+        making them unsuitable for direct use as confidence percentages.
 
         Args:
-            top_score: The highest retrieval score among the chunks.
+            chunks: The retrieved chunks (already filtered/ranked).
 
         Returns:
-            A normalised confidence score in [0.0, 1.0].
+            A confidence score in [0.0, 1.0]:
+            - 0.75-0.95: High confidence (focused retrieval from 1-2 docs)
+            - 0.50-0.74: Medium confidence (moderate diversity)
+            - 0.20-0.49: Low confidence (scattered retrieval)
+            - 0.00-0.19: Very low confidence (weak evidence)
         """
-        return max(0.0, min(1.0, top_score))
+        if not chunks:
+            return 0.0
+
+        # Analyze top-5 chunks for confidence signals
+        top_chunks = list(chunks[:5])
+        unique_docs = set(chunk.filename for chunk in top_chunks)
+        num_unique = len(unique_docs)
+        num_chunks = len(top_chunks)
+
+        # Signal 1: Document diversity (lower is better)
+        # 1 unique doc → diversity_factor = 1.0
+        # 2 unique docs → diversity_factor = 0.8
+        # 3+ unique docs → diversity_factor = 0.6
+        if num_unique == 1:
+            diversity_factor = 1.0
+        elif num_unique == 2:
+            diversity_factor = 0.8
+        else:
+            diversity_factor = 0.6
+
+        # Signal 2: Chunk count (more supporting chunks = more confident)
+        # 5 chunks → coverage_factor = 1.0
+        # 3 chunks → coverage_factor = 0.8
+        # 1 chunk → coverage_factor = 0.6
+        coverage_factor = min(1.0, 0.4 + (num_chunks * 0.12))
+
+        # Signal 3: Score concentration (are top scores significantly higher?)
+        # High RRF scores indicate chunks appeared in multiple retriever lists
+        scores = [chunk.score for chunk in chunks[:min(10, len(chunks))]]
+        top_score = scores[0]
+        avg_score = sum(scores) / len(scores)
+        
+        # If top score is much higher than average, retrieval is confident
+        # Typical RRF: top ~0.016, avg ~0.013 → ratio ~1.23
+        # Strong retrieval: top ~0.030, avg ~0.016 → ratio ~1.88
+        score_ratio = top_score / avg_score if avg_score > 0 else 1.0
+        concentration_factor = min(1.0, (score_ratio - 1.0) / 1.0)  # Normalize around ratio=1-2
+
+        # Combine factors with weights
+        base_confidence = (
+            diversity_factor * 0.5 +  # Document focus is most important
+            coverage_factor * 0.3 +   # Supporting evidence matters
+            concentration_factor * 0.2  # Score distribution is a weak signal
+        )
+
+        # Map to confidence bands
+        if base_confidence >= 0.85:
+            # High confidence: single document, many chunks, strong scores
+            confidence = 0.75 + (base_confidence - 0.85) * 1.33  # Maps 0.85-1.0 → 0.75-0.95
+        elif base_confidence >= 0.65:
+            # Medium-high confidence
+            confidence = 0.50 + (base_confidence - 0.65) * 1.25  # Maps 0.65-0.85 → 0.50-0.75
+        elif base_confidence >= 0.45:
+            # Medium-low confidence
+            confidence = 0.25 + (base_confidence - 0.45) * 1.25  # Maps 0.45-0.65 → 0.25-0.50
+        else:
+            # Low confidence: scattered retrieval or weak evidence
+            confidence = base_confidence * 0.55  # Maps 0.0-0.45 → 0.0-0.25
+
+        return max(0.0, min(1.0, confidence))

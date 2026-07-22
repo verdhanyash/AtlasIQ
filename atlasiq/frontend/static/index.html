@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AtlasIQ | Knowledge Search</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Liquid Glass Custom Animations */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .skeleton-shimmer {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite linear;
+        }
+
+        @keyframes border-glow {
+            0%, 100% { border-color: rgba(255,255,255,0.1); box-shadow: 0 0 5px rgba(255,255,255,0.05); }
+            50% { border-color: rgba(255,255,255,0.4); box-shadow: 0 0 15px rgba(255,255,255,0.15); }
+        }
+
+        .animated-border-glow {
+            animation: border-glow 3s infinite ease-in-out;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .document-card {
+            transition: all 0.3s ease;
+        }
+        
+        .glass-level-1 summary:hover {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .glass-level-1 {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-level-2 {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+        }
+
+        .glass-level-3 {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        body {
+            background-color: #141313;
+            color: #e5e2e1;
+            overflow-x: hidden;
+        }
+
+        .confidence-high {
+            background: rgba(76, 175, 80, 0.10);
+            border: 1px solid rgba(76, 175, 80, 0.20);
+            color: #4CAF50;
+        }
+
+        .confidence-medium {
+            background: rgba(245, 158, 11, 0.10);
+            border: 1px solid rgba(245, 158, 11, 0.20);
+            color: #F59E0B;
+        }
+
+        .confidence-low {
+            background: rgba(255, 180, 171, 0.10);
+            border: 1px solid rgba(255, 180, 171, 0.20);
+            color: #ffb4ab;
+        }
+        
+        .text-success {
+            color: #4CAF50;
+        }
+        
+        .text-error {
+            color: #ffb4ab;
+        }
+        
+        /* Space Blue color palette */
+        .space-blue {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2a4a6f 100%);
+        }
+        
+        .space-blue-light {
+            background: rgba(42, 74, 111, 0.15);
+            border: 1px solid rgba(94, 156, 255, 0.3);
+        }
+        
+        .space-blue-border {
+            border-color: rgba(94, 156, 255, 0.4);
+        }
+        
+        .text-space-blue {
+            color: #5e9cff;
+        }
+
+        .citation-sup {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            color: #ffffff;
+            vertical-align: super;
+            line-height: 1;
+            margin: 0 2px;
+            cursor: default;
+        }
+
+        .citation-header {
+            transition: background-color 0.2s ease;
+        }
+        
+        .citation-header:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+        
+        .citation-content {
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+            }
+            to {
+                opacity: 1;
+                max-height: 500px;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error-container": "#93000a",
+                      "surface-container": "#201f1f",
+                      "on-tertiary-container": "#636565",
+                      "on-secondary-fixed-variant": "#45464e",
+                      "outline-variant": "#444748",
+                      "on-primary-fixed": "#1a1c1c",
+                      "on-secondary": "#2f3037",
+                      "inverse-on-surface": "#313030",
+                      "error": "#ffb4ab",
+                      "secondary-container": "#45464e",
+                      "on-background": "#e5e2e1",
+                      "primary-fixed-dim": "#c6c6c7",
+                      "surface-variant": "#353434",
+                      "tertiary-fixed-dim": "#c6c6c7",
+                      "primary-container": "#e2e2e2",
+                      "tertiary-fixed": "#e2e2e2",
+                      "primary-fixed": "#e2e2e2",
+                      "primary": "#ffffff",
+                      "surface-container-low": "#1c1b1b",
+                      "surface-container-high": "#2a2a2a",
+                      "surface-container-lowest": "#0e0e0e",
+                      "secondary-fixed": "#e2e1eb",
+                      "surface-tint": "#c6c6c7",
+                      "on-tertiary-fixed": "#1a1c1c",
+                      "on-primary-fixed-variant": "#454747",
+                      "secondary": "#c6c6cf",
+                      "outline": "#8e9192",
+                      "on-error": "#690005",
+                      "secondary-fixed-dim": "#c6c6cf",
+                      "on-surface-variant": "#c4c7c8",
+                      "surface-container-highest": "#353434",
+                      "tertiary": "#ffffff",
+                      "surface": "#141313",
+                      "on-error-container": "#ffdad6",
+                      "inverse-primary": "#5d5f5f",
+                      "on-secondary-fixed": "#1a1b22",
+                      "on-primary-container": "#636565",
+                      "on-secondary-container": "#b4b4bd",
+                      "on-primary": "#2f3131",
+                      "surface-bright": "#3a3939",
+                      "tertiary-container": "#e2e2e2",
+                      "on-tertiary-fixed-variant": "#454747",
+                      "background": "#141313",
+                      "on-surface": "#e5e2e1",
+                      "on-tertiary": "#2f3131",
+                      "surface-dim": "#141313",
+                      "inverse-surface": "#e5e2e1"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": ["Inter"],
+                      "label-sm": ["JetBrains Mono"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "headline-xl": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "label-md": ["JetBrains Mono"]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="font-body-md text-body-md selection:bg-primary/20 selection:text-primary">
+
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container/30 backdrop-blur-2xl border-r border-white/10 flex flex-col p-10 gap-6 z-50">
+    <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center p-1.5">
+            <img src="/logo.png" alt="AtlasIQ Logo" class="w-full h-full object-contain">
+        </div>
+        <div>
+            <h1 class="font-headline-md text-[24px] font-bold text-on-surface leading-none">AtlasIQ</h1>
+            <p class="font-label-sm text-[12px] text-on-surface-variant opacity-60">Enterprise RAG</p>
+        </div>
+    </div>
+    <nav class="flex-1 mt-8 space-y-2">
+        <a class="flex items-center gap-3 px-3 py-2 text-primary font-bold bg-white/5 rounded-lg transition-transform active:scale-95" href="#" id="nav-library">
+            <span class="material-symbols-outlined text-[20px]">chat</span>
+            <span class="font-label-md text-[14px]">AtlasIQ</span>
+        </a>
+        <a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 rounded-lg" href="#" id="nav-collections">
+            <span class="material-symbols-outlined text-[20px]">settings</span>
+            <span class="font-label-md text-[14px]">Model Settings</span>
+        </a>
+        <a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 rounded-lg" href="#" id="nav-settings">
+            <span class="material-symbols-outlined text-[20px]">library_books</span>
+            <span class="font-label-md text-[14px]">Collections</span>
+        </a>
+        <a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 rounded-lg" href="#" id="nav-profile">
+            <span class="material-symbols-outlined text-[20px]">account_circle</span>
+            <span class="font-label-md text-[14px]">User Profile</span>
+        </a>
+    </nav>
+    <input type="file" id="file-input" accept=".pdf,.txt,.md,.docx" multiple class="hidden">
+    <button class="mt-auto w-full py-3 px-4 glass-level-2 rounded-lg font-label-md text-[14px] text-primary flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all cursor-pointer" id="upload-btn">
+        <span class="material-symbols-outlined text-[18px]">upload</span>
+        Upload
+    </button>
+</aside>
+
+<!-- Main Content Area -->
+<main class="ml-[240px] min-h-screen flex flex-col">
+    <!-- TopAppBar -->
+    <header class="sticky top-0 z-40 w-full h-16 px-10 backdrop-blur-3xl border-b border-white/5 flex justify-between items-center">
+        <div class="flex items-center gap-4">
+            <span class="font-label-sm text-[12px] text-on-surface-variant tracking-widest uppercase">System Status: <span id="system-status">Optimal</span></span>
+        </div>
+        <div class="flex items-center gap-6">
+            <button class="text-on-surface-variant hover:text-primary transition-opacity active:opacity-80">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
+            <button class="text-on-surface-variant hover:text-primary transition-opacity active:opacity-80">
+                <span class="material-symbols-outlined">help_outline</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Canvas Area -->
+    <div class="flex-1 p-10 max-w-screen-xl mx-auto w-full" id="main-canvas">
+        <!-- Empty State (Home) -->
+        <div id="empty-state" class="flex flex-col items-center justify-center min-h-[70vh] text-center">
+            <div class="mb-12">
+                <div class="w-16 h-16 glass-level-2 rounded-2xl flex items-center justify-center mb-6 mx-auto p-4">
+                    <img src="/logo.png" alt="AtlasIQ" class="w-full h-full object-contain">
+                </div>
+                <h3 class="text-[32px] font-semibold mb-2">How can I help you today?</h3>
+                <p class="text-[16px] text-on-surface-variant max-w-md mx-auto">
+                    Get started by asking a question about your documents. AtlasIQ parses your enterprise data in seconds.
+                </p>
+            </div>
+
+            <!-- Large Search Input -->
+            <div class="w-full max-w-3xl mb-12 glass-level-2 rounded-2xl p-2 transition-all duration-300">
+                <div class="relative flex items-center h-14">
+                    <span class="material-symbols-outlined absolute left-4 text-on-surface-variant">search</span>
+                    <input 
+                        class="w-full h-full bg-transparent border-none focus:ring-0 pl-14 pr-32 text-[18px] text-primary placeholder:text-on-surface-variant/40" 
+                        placeholder="Ask anything..." 
+                        type="text"
+                        id="search-input"
+                    />
+                    <div class="absolute right-2 flex items-center gap-2">
+                        <button class="bg-primary text-background font-label-md text-[14px] px-4 py-2 rounded-xl hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all" id="search-btn">
+                            Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suggestions Grid -->
+            <div class="w-full max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-6">
+                <button class="glass-level-1 p-6 rounded-xl text-left hover:bg-white/5 transition-all group border-white/5 hover:border-white/20 example-card" data-query="What is the projected revenue for Q4?">
+                    <div class="flex items-start gap-4">
+                        <div class="mt-1">
+                            <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">trending_up</span>
+                        </div>
+                        <div>
+                            <p class="text-[12px] text-on-surface-variant uppercase mb-2 opacity-40">Finance</p>
+                            <p class="text-[16px] text-on-surface">What is the projected revenue for Q4?</p>
+                        </div>
+                    </div>
+                </button>
+                <button class="glass-level-1 p-6 rounded-xl text-left hover:bg-white/5 transition-all group border-white/5 hover:border-white/20 example-card" data-query="Summarize the market analysis report.">
+                    <div class="flex items-start gap-4">
+                        <div class="mt-1">
+                            <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">description</span>
+                        </div>
+                        <div>
+                            <p class="text-[12px] text-on-surface-variant uppercase mb-2 opacity-40">Analysis</p>
+                            <p class="text-[16px] text-on-surface">Summarize the market analysis report.</p>
+                        </div>
+                    </div>
+                </button>
+                <button class="glass-level-1 p-6 rounded-xl text-left hover:bg-white/5 transition-all group border-white/5 hover:border-white/20 example-card" data-query="Review the termination clauses in current vendor contracts.">
+                    <div class="flex items-start gap-4">
+                        <div class="mt-1">
+                            <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">shield</span>
+                        </div>
+                        <div>
+                            <p class="text-[12px] text-on-surface-variant uppercase mb-2 opacity-40">Legal</p>
+                            <p class="text-[16px] text-on-surface">Review the termination clauses in current vendor contracts.</p>
+                        </div>
+                    </div>
+                </button>
+                <button class="glass-level-1 p-6 rounded-xl text-left hover:bg-white/5 transition-all group border-white/5 hover:border-white/20 example-card" data-query="Identify cross-departmental synergy opportunities.">
+                    <div class="flex items-start gap-4">
+                        <div class="mt-1">
+                            <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">hub</span>
+                        </div>
+                        <div>
+                            <p class="text-[12px] text-on-surface-variant uppercase mb-2 opacity-40">Strategy</p>
+                            <p class="text-[16px] text-on-surface">Identify cross-departmental synergy opportunities.</p>
+                        </div>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Footer Hint -->
+            <div class="mt-16 flex items-center gap-3 text-[12px] text-on-surface-variant/40">
+                <span class="material-symbols-outlined !text-[16px]">info</span>
+                <span id="doc-count">AtlasIQ searches across indexed enterprise documents</span>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="hidden space-y-8">
+            <!-- Search Input (Filled) -->
+            <div class="relative max-w-3xl mx-auto">
+                <div class="w-full h-16 glass-level-1 rounded-full flex items-center px-6 animated-border-glow">
+                    <span class="material-symbols-outlined text-primary/40 mr-4">search</span>
+                    <input class="bg-transparent border-none text-on-surface w-full focus:ring-0 focus:outline-none placeholder-on-surface-variant/50" readonly type="text" id="loading-query"/>
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary/40 text-[20px]">mic</span>
+                        <div class="w-[1px] h-6 bg-white/10"></div>
+                        <span class="material-symbols-outlined text-primary text-[20px]">send</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Status -->
+            <div class="max-w-4xl mx-auto space-y-10">
+                <div class="flex items-center justify-center gap-4">
+                    <div class="flex space-x-1">
+                        <div class="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                        <div class="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        <div class="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
+                    </div>
+                    <span class="font-label-md text-[14px] text-primary font-medium tracking-wide">Retrieving evidence...</span>
+                </div>
+
+                <!-- Skeleton Container -->
+                <div class="glass-level-2 rounded-2xl p-6 space-y-8 relative overflow-hidden">
+                    <div class="absolute inset-0 skeleton-shimmer opacity-20 pointer-events-none"></div>
+                    <div class="space-y-4 relative z-10">
+                        <div class="h-6 w-3/4 glass-level-3 rounded skeleton-shimmer"></div>
+                        <div class="h-4 w-full glass-level-1 rounded skeleton-shimmer"></div>
+                        <div class="h-4 w-11/12 glass-level-1 rounded skeleton-shimmer"></div>
+                        <div class="h-4 w-full glass-level-1 rounded skeleton-shimmer"></div>
+                        <div class="h-4 w-4/5 glass-level-1 rounded skeleton-shimmer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results State -->
+        <div id="results-state" class="hidden space-y-8">
+            <!-- Search Input (Filled) -->
+            <div class="relative max-w-3xl mx-auto">
+                <div class="w-full h-16 glass-level-1 rounded-full flex items-center px-6">
+                    <span class="material-symbols-outlined text-primary/40 mr-4">search</span>
+                    <input class="bg-transparent border-none text-on-surface w-full focus:ring-0 focus:outline-none" readonly type="text" id="results-query"/>
+                    <button class="ml-4" id="new-search-btn">
+                        <span class="material-symbols-outlined text-primary text-[20px]">edit</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Answer Container -->
+            <div class="max-w-4xl mx-auto space-y-6">
+                <!-- Metadata Bar -->
+                <div class="glass-level-1 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex flex-wrap items-center gap-6">
+                        <!-- Confidence Badge -->
+                        <div id="confidence-badge" class="inline-flex items-center gap-2 px-4 py-2 rounded-full font-['JetBrains_Mono'] text-[10px] font-medium uppercase tracking-wide">
+                            <span class="material-symbols-outlined !text-[14px]">check_circle</span>
+                            <span id="confidence-text">High Confidence (85%)</span>
+                        </div>
+                        
+                        <!-- Latency -->
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px] text-on-surface-variant">schedule</span>
+                            <span class="text-[12px] font-['JetBrains_Mono'] text-on-surface-variant">
+                                <span class="text-on-surface" id="response-time-value">0.0</span>ms
+                            </span>
+                        </div>
+                        
+                        <!-- Provider -->
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px] text-on-surface-variant">cloud</span>
+                            <span class="text-[12px] font-['JetBrains_Mono'] text-on-surface" id="provider-display">Ollama</span>
+                        </div>
+                        
+                        <!-- Model -->
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px] text-on-surface-variant">psychology</span>
+                            <span class="text-[12px] font-['JetBrains_Mono'] text-on-surface" id="model-display">gemma3:4b</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Timestamp -->
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[16px] text-on-surface-variant">access_time</span>
+                        <span class="text-[12px] font-['JetBrains_Mono'] text-on-surface-variant" id="generated-time">--:--</span>
+                    </div>
+                </div>
+
+                <!-- Answer Card -->
+                <div class="glass-level-2 rounded-2xl p-8 relative">
+                    <div class="prose prose-invert max-w-none">
+                        <div id="answer-content" class="text-[18px] leading-relaxed text-on-surface"></div>
+                    </div>
+                </div>
+
+                <!-- Citations -->
+                <div class="pt-4">
+                    <h4 class="text-[14px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-4">Citations & Evidence</h4>
+                    <div class="space-y-4" id="citations-container"></div>
+                </div>
+
+                <!-- Retrieval Details (Technical) -->
+                <div class="pt-8" id="retrieval-details-section" style="display:none;">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-[14px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide">Retrieval Details</h4>
+                        <span class="text-[10px] font-['JetBrains_Mono'] text-on-surface-variant/60">Technical Information</span>
+                    </div>
+                    <div class="glass-level-2 rounded-2xl p-6 space-y-6" id="retrieval-details-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collections View -->
+    <div id="collections-view" class="hidden p-10 max-w-screen-xl mx-auto w-full">
+        <div class="mb-8 flex items-center justify-between">
+            <div>
+                <h2 class="text-[32px] font-semibold mb-2">Document Collections</h2>
+                <p class="text-[14px] text-on-surface-variant">All indexed documents in your knowledge base</p>
+            </div>
+            <button id="refresh-collections" class="flex items-center gap-2 px-4 py-2 glass-level-2 rounded-lg text-[14px] font-label-md text-primary hover:bg-white/10 transition-all">
+                <span class="material-symbols-outlined text-[20px]">refresh</span>
+                Refresh
+            </button>
+        </div>
+        
+        <!-- Stats Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="glass-level-2 rounded-xl p-4">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-[24px]">description</span>
+                    <div>
+                        <p class="text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase">Documents</p>
+                        <p class="text-[24px] font-semibold" id="total-docs">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-level-2 rounded-xl p-4">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-[24px]">layers</span>
+                    <div>
+                        <p class="text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase">Chunks</p>
+                        <p class="text-[24px] font-semibold" id="total-chunks">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-level-2 rounded-xl p-4">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-[24px]">storage</span>
+                    <div>
+                        <p class="text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase">Total Size</p>
+                        <p class="text-[24px] font-semibold" id="total-size">0 MB</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-level-2 rounded-xl p-4">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-success text-[24px]">check_circle</span>
+                    <div>
+                        <p class="text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase">Indexed</p>
+                        <p class="text-[24px] font-semibold" id="indexed-docs">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Documents Grid -->
+        <div id="documents-grid" class="grid grid-cols-1 gap-4">
+            <!-- Document cards will be inserted here -->
+        </div>
+        
+        <!-- Empty State -->
+        <div id="collections-empty" class="hidden text-center py-16">
+            <span class="material-symbols-outlined text-[64px] text-on-surface-variant opacity-30 mb-4">folder_off</span>
+            <h3 class="text-[20px] font-semibold mb-2">No documents yet</h3>
+            <p class="text-[14px] text-on-surface-variant mb-6">Upload your first document to get started</p>
+            <button class="bg-primary text-background px-6 py-3 rounded-xl hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all" onclick="document.getElementById('upload-btn').click()">
+                Upload Document
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-auto p-6 border-t border-white/5 flex justify-end items-center opacity-60">
+        <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
+            <span class="text-[12px] text-on-surface">Backend Connected</span>
+        </div>
+    </footer>
+</main>
+
+<!-- Model Selection Modal -->
+<div id="model-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="glass-level-3 rounded-2xl p-8 max-w-md w-full mx-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-[24px] font-semibold">LLM Model Settings</h2>
+            <button id="close-modal" class="text-on-surface-variant hover:text-primary">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <div class="space-y-6">
+            <!-- Provider Selection -->
+            <div>
+                <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">Provider</label>
+                <select id="llm-provider" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
+                    <option value="ollama">Ollama (Local)</option>
+                    <option value="nvidia">NVIDIA Build API</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                </select>
+            </div>
+            
+            <!-- Model Selection -->
+            <div id="model-config">
+                <!-- Ollama Config -->
+                <div id="ollama-config" class="space-y-4">
+                    <div>
+                        <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">Model</label>
+                        <input type="text" id="ollama-model" value="gemma3:4b" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none" placeholder="gemma3:4b">
+                    </div>
+                    <div>
+                        <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">Base URL</label>
+                        <input type="text" id="ollama-url" value="http://localhost:11434" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
+                    </div>
+                </div>
+                
+                <!-- NVIDIA Config -->
+                <div id="nvidia-config" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">Model</label>
+                        <input type="text" id="nvidia-model" value="meta/llama-3.1-405b-instruct" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">API Key</label>
+                        <input type="password" id="nvidia-key" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none" placeholder="nvapi-xxx">
+                    </div>
+                </div>
+                
+                <!-- OpenAI Config -->
+                <div id="openai-config" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">Model</label>
+                        <select id="openai-model" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
+                            <option value="gpt-4o-mini">GPT-4o-mini</option>
+                            <option value="gpt-4o">GPT-4o</option>
+                            <option value="gpt-4-turbo">GPT-4-turbo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">API Key</label>
+                        <input type="password" id="openai-key" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none" placeholder="sk-xxx">
+                    </div>
+                </div>
+                
+                <!-- Anthropic Config -->
+                <div id="anthropic-config" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">Model</label>
+                        <select id="anthropic-model" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
+                            <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                            <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">API Key</label>
+                        <input type="password" id="anthropic-key" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none" placeholder="sk-ant-xxx">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Save Button -->
+            <button id="save-model" class="w-full bg-primary text-background font-label-md text-[14px] py-3 rounded-xl hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all">
+                Save Settings
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Configuration
+    const API_BASE_URL = 'http://localhost:8000';
+    
+    // State management
+    let currentState = 'empty'; // 'empty', 'loading', 'results', 'collections'
+    let llmConfig = {
+        provider: 'ollama',
+        model: 'gemma3:4b',
+        apiKey: null,
+        baseUrl: 'http://localhost:11434'
+    };
+    
+    // Load saved config from localStorage
+    const savedConfig = localStorage.getItem('llm_config');
+    if (savedConfig) {
+        llmConfig = JSON.parse(savedConfig);
+    }
+    
+    // DOM Elements
+    const emptyState = document.getElementById('empty-state');
+    const loadingState = document.getElementById('loading-state');
+    const resultsState = document.getElementById('results-state');
+    const collectionsView = document.getElementById('collections-view');
+    const searchInput = document.getElementById('search-input');
+    const searchBtn = document.getElementById('search-btn');
+    const loadingQuery = document.getElementById('loading-query');
+    const resultsQuery = document.getElementById('results-query');
+    const answerContent = document.getElementById('answer-content');
+    const citationsContainer = document.getElementById('citations-container');
+    const confidenceBadge = document.getElementById('confidence-badge');
+    const confidenceText = document.getElementById('confidence-text');
+    const responseTime = document.getElementById('response-time');
+    const responseTimeValue = document.getElementById('response-time-value');
+    const providerDisplay = document.getElementById('provider-display');
+    const modelDisplay = document.getElementById('model-display');
+    const generatedTime = document.getElementById('generated-time');
+    const newSearchBtn = document.getElementById('new-search-btn');
+    const exampleCards = document.querySelectorAll('.example-card');
+    
+    // Modal elements
+    const modelModal = document.getElementById('model-modal');
+    const navCollections = document.getElementById('nav-collections');
+    const closeModal = document.getElementById('close-modal');
+    const saveModel = document.getElementById('save-model');
+    const llmProviderSelect = document.getElementById('llm-provider');
+    const ollamaConfig = document.getElementById('ollama-config');
+    const nvidiaConfig = document.getElementById('nvidia-config');
+    const openaiConfig = document.getElementById('openai-config');
+    const anthropicConfig = document.getElementById('anthropic-config');
+    
+    // Upload elements
+    const uploadBtn = document.getElementById('upload-btn');
+    const fileInput = document.getElementById('file-input');
+    
+    // State transitions
+    function setState(state) {
+        currentState = state;
+        
+        emptyState.classList.toggle('hidden', state !== 'empty');
+        loadingState.classList.toggle('hidden', state !== 'loading');
+        resultsState.classList.toggle('hidden', state !== 'results');
+        collectionsView.classList.toggle('hidden', state !== 'collections');
+    }
+    
+    // Handle search
+    async function performSearch(query) {
+        if (!query.trim()) return;
+        
+        // Transition to loading state
+        setState('loading');
+        loadingQuery.value = query;
+        
+        const startTime = Date.now();
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/query`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    question: query
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+            
+            // Display results
+            displayResults(query, data, elapsed);
+            
+        } catch (error) {
+            console.error('Search error:', error);
+            alert('Search failed. Please ensure the backend is running on port 8000.');
+            setState('empty');
+        }
+    }
+    
+    // Display results
+    function displayResults(query, data, elapsed) {
+        setState('results');
+        
+        resultsQuery.value = query;
+        
+        // Format elapsed time in ms
+        const elapsedMs = Math.round(elapsed * 1000);
+        responseTimeValue.textContent = elapsedMs;
+        
+        // Display provider and model
+        providerDisplay.textContent = llmConfig.provider.charAt(0).toUpperCase() + llmConfig.provider.slice(1);
+        modelDisplay.textContent = llmConfig.model;
+        
+        // Display timestamp
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        generatedTime.textContent = `${hours}:${minutes}`;
+        
+        // Confidence badge
+        const confidence = data.confidence || 0.5;
+        let badgeClass, badgeLabel;
+        
+        if (confidence >= 0.7) {
+            badgeClass = 'confidence-high';
+            badgeLabel = `High Confidence (${Math.round(confidence * 100)}%)`;
+        } else if (confidence >= 0.4) {
+            badgeClass = 'confidence-medium';
+            badgeLabel = `Medium Confidence (${Math.round(confidence * 100)}%)`;
+        } else {
+            badgeClass = 'confidence-low';
+            badgeLabel = `Low Confidence (${Math.round(confidence * 100)}%)`;
+        }
+        
+        confidenceBadge.className = `inline-flex items-center gap-2 px-4 py-2 rounded-full font-['JetBrains_Mono'] text-[10px] font-medium uppercase tracking-wide ${badgeClass}`;
+        confidenceText.textContent = badgeLabel;
+        
+        // Answer with citations
+        let answer = data.answer || 'No answer generated.';
+        
+        // Replace citation markers (if any) with citation superscripts
+        // The backend might return [1], [2] or we need to insert them based on quotes
+        answer = answer.replace(/\[(\d+)\]/g, '<span class="citation-sup">$1</span>');
+        
+        answerContent.innerHTML = answer;
+        
+        // Citations with enhanced display
+        citationsContainer.innerHTML = '';
+        if (data.citations && data.citations.length > 0) {
+            data.citations.forEach((citation, index) => {
+                const citationCard = document.createElement('div');
+                citationCard.className = 'glass-level-3 rounded-xl overflow-hidden';
+                
+                const score = citation.score || 0;
+                const scorePercentage = Math.round(score * 1000) / 10; // RRF scores are ~0.01-0.02
+                const chunkIndex = citation.chunk_index !== undefined ? citation.chunk_index : 'N/A';
+                
+                citationCard.innerHTML = `
+                    <div class="p-4 cursor-pointer citation-header" data-citation-id="${index}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center gap-3 flex-1">
+                                <div class="w-8 h-8 rounded-lg glass-level-2 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-[14px] font-['JetBrains_Mono'] font-bold text-primary">${index + 1}</span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="material-symbols-outlined text-[16px] text-on-surface-variant">description</span>
+                                        <span class="text-[12px] font-['JetBrains_Mono'] text-on-surface truncate">${citation.document_name || 'Document'}</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-[10px] font-['JetBrains_Mono'] text-on-surface-variant/60">
+                                        <span>Page: ${citation.page || 'N/A'}</span>
+                                        <span>Chunk: ${chunkIndex}</span>
+                                        <span class="px-2 py-0.5 rounded bg-white/5">RRF: ${scorePercentage}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <button class="copy-citation-btn p-2 hover:bg-white/10 rounded-lg transition-colors" data-citation-text="${citation.quote || ''}" data-source="${citation.document_name || ''}" data-page="${citation.page || ''}">
+                                    <span class="material-symbols-outlined text-[18px] text-on-surface-variant">content_copy</span>
+                                </button>
+                                <span class="material-symbols-outlined text-[20px] text-on-surface-variant citation-expand-icon">expand_more</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="citation-content hidden p-4 pt-0 border-t border-white/5 mt-2">
+                        <div class="glass-level-1 rounded-lg p-4">
+                            <p class="text-[12px] text-on-surface-variant/80 leading-relaxed whitespace-pre-wrap">${citation.quote || 'No content available'}</p>
+                        </div>
+                    </div>
+                `;
+                
+                citationsContainer.appendChild(citationCard);
+            });
+            
+            // Add expand/collapse functionality
+            document.querySelectorAll('.citation-header').forEach(header => {
+                header.addEventListener('click', (e) => {
+                    if (e.target.closest('.copy-citation-btn')) return; // Don't expand when clicking copy
+                    
+                    const citationId = header.getAttribute('data-citation-id');
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('.citation-expand-icon');
+                    
+                    if (content.classList.contains('hidden')) {
+                        content.classList.remove('hidden');
+                        icon.textContent = 'expand_less';
+                    } else {
+                        content.classList.add('hidden');
+                        icon.textContent = 'expand_more';
+                    }
+                });
+            });
+            
+            // Add copy citation functionality
+            document.querySelectorAll('.copy-citation-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation(); // Prevent expand/collapse
+                    const text = btn.getAttribute('data-citation-text');
+                    const source = btn.getAttribute('data-source');
+                    const page = btn.getAttribute('data-page');
+                    
+                    const citationText = `"${text}"\n\nSource: ${source}\nPage: ${page}`;
+                    
+                    try {
+                        await navigator.clipboard.writeText(citationText);
+                        // Show feedback
+                        const icon = btn.querySelector('.material-symbols-outlined');
+                        const originalIcon = icon.textContent;
+                        icon.textContent = 'check';
+                        icon.style.color = '#4CAF50';
+                        setTimeout(() => {
+                            icon.textContent = originalIcon;
+                            icon.style.color = '';
+                        }, 1500);
+                    } catch (err) {
+                        console.error('Failed to copy:', err);
+                    }
+                });
+            });
+        }
+        
+        // Retrieval Details
+        const retrievalDetailsSection = document.getElementById('retrieval-details-section');
+        const retrievalDetailsContent = document.getElementById('retrieval-details-content');
+        
+        if (data.retrieval_details && data.retrieval_details.final_chunks) {
+            retrievalDetailsSection.style.display = 'block';
+            
+            const details = data.retrieval_details;
+            const finalChunks = details.final_chunks || [];
+            
+            retrievalDetailsContent.innerHTML = `
+                <!-- Method Badge -->
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="material-symbols-outlined text-primary">hub</span>
+                    <div>
+                        <p class="text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide">Retrieval Method</p>
+                        <p class="text-[20px] font-semibold text-primary">${details.method || 'Hybrid'}</p>
+                    </div>
+                </div>
+                
+                <!-- Statistics -->
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="glass-level-1 rounded-lg p-4">
+                        <p class="text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase mb-1">Total Candidates</p>
+                        <p class="text-[24px] font-bold text-on-surface">${details.total_candidates || 0}</p>
+                    </div>
+                    <div class="glass-level-1 rounded-lg p-4">
+                        <p class="text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase mb-1">Final Retrieved</p>
+                        <p class="text-[24px] font-bold text-primary">${finalChunks.length}</p>
+                    </div>
+                    <div class="glass-level-1 rounded-lg p-4">
+                        <p class="text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase mb-1">Filtered Out</p>
+                        <p class="text-[24px] font-bold text-on-surface-variant">${details.total_filtered || 0}</p>
+                    </div>
+                </div>
+                
+                <!-- Final Chunks Table -->
+                <div>
+                    <h5 class="text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-3">Final Retrieved Chunks</h5>
+                    <div class="glass-level-1 rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-white/10">
+                                        <th class="text-left p-3 text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase">#</th>
+                                        <th class="text-left p-3 text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase">Document</th>
+                                        <th class="text-left p-3 text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase">Chunk</th>
+                                        <th class="text-left p-3 text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase">Page</th>
+                                        <th class="text-right p-3 text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase">RRF Score</th>
+                                        <th class="text-left p-3 text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase">Preview</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${finalChunks.map((chunk, idx) => `
+                                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                            <td class="p-3 text-[12px] font-['JetBrains_Mono'] text-on-surface-variant">${idx + 1}</td>
+                                            <td class="p-3 text-[11px] font-['JetBrains_Mono'] text-on-surface max-w-[150px] truncate">${chunk.document_name || 'N/A'}</td>
+                                            <td class="p-3 text-[11px] font-['JetBrains_Mono'] text-on-surface-variant">${chunk.chunk_index !== undefined ? chunk.chunk_index : 'N/A'}</td>
+                                            <td class="p-3 text-[11px] font-['JetBrains_Mono'] text-on-surface-variant">${chunk.page || 'N/A'}</td>
+                                            <td class="p-3 text-right">
+                                                <span class="px-2 py-1 rounded bg-white/10 text-[10px] font-['JetBrains_Mono'] text-primary">
+                                                    ${(chunk.score || 0).toFixed(4)}
+                                                </span>
+                                            </td>
+                                            <td class="p-3 text-[10px] text-on-surface-variant/60 max-w-[200px] truncate">${(chunk.content || '').substring(0, 80)}...</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            retrievalDetailsSection.style.display = 'none';
+        }
+    }
+    
+    // Event listeners
+    searchBtn.addEventListener('click', () => {
+        performSearch(searchInput.value);
+    });
+    
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            performSearch(searchInput.value);
+        }
+    });
+    
+    newSearchBtn.addEventListener('click', () => {
+        setState('empty');
+        searchInput.value = '';
+        searchInput.focus();
+    });
+    
+    // Example card clicks
+    exampleCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const query = card.getAttribute('data-query');
+            searchInput.value = query;
+            performSearch(query);
+        });
+    });
+    
+    // Check backend connection on load
+    async function checkBackend() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/health`);
+            if (response.ok) {
+                document.getElementById('system-status').textContent = 'Optimal';
+            } else {
+                document.getElementById('system-status').textContent = 'Degraded';
+            }
+        } catch (error) {
+            document.getElementById('system-status').textContent = 'Backend Offline';
+            console.warn('Backend not reachable:', error);
+        }
+    }
+    
+    // Initialize
+    checkBackend();
+    
+    // Collections functionality
+    const navSettings = document.getElementById('nav-settings');
+    const navLibrary = document.getElementById('nav-library');
+    const documentsGrid = document.getElementById('documents-grid');
+    const collectionsEmpty = document.getElementById('collections-empty');
+    const totalDocs = document.getElementById('total-docs');
+    const totalChunks = document.getElementById('total-chunks');
+    const totalSize = document.getElementById('total-size');
+    const indexedDocs = document.getElementById('indexed-docs');
+    
+    navSettings.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await loadCollections();
+    });
+    
+    // Refresh button
+    const refreshCollections = document.getElementById('refresh-collections');
+    if (refreshCollections) {
+        refreshCollections.addEventListener('click', async (e) => {
+            e.preventDefault();
+            refreshCollections.querySelector('.material-symbols-outlined').style.animation = 'spin 1s linear infinite';
+            await loadCollections();
+            refreshCollections.querySelector('.material-symbols-outlined').style.animation = '';
+        });
+    }
+    
+    navLibrary.addEventListener('click', (e) => {
+        e.preventDefault();
+        setState('empty');
+        searchInput.value = '';
+    });
+    
+    async function loadCollections() {
+        setState('collections');
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/ingest/documents?limit=100`);
+            if (!response.ok) throw new Error('Failed to fetch documents');
+            
+            const data = await response.json();
+            const documents = data.documents || [];
+            
+            if (documents.length === 0) {
+                collectionsEmpty.classList.remove('hidden');
+                documentsGrid.classList.add('hidden');
+                return;
+            }
+            
+            collectionsEmpty.classList.add('hidden');
+            documentsGrid.classList.remove('hidden');
+            
+            // Fetch detailed info for each document
+            const detailedDocs = await Promise.all(
+                documents.map(async (doc) => {
+                    try {
+                        const detailResponse = await fetch(`${API_BASE_URL}/ingest/status/${doc.document_id}`);
+                        if (detailResponse.ok) {
+                            return await detailResponse.json();
+                        }
+                        return doc;
+                    } catch {
+                        return doc;
+                    }
+                })
+            );
+            
+            // Calculate stats
+            let totalSizeBytes = 0;
+            let totalChunkCount = 0;
+            let indexedCount = 0;
+            
+            detailedDocs.forEach(doc => {
+                if (doc.file_size_bytes) totalSizeBytes += doc.file_size_bytes;
+                if (doc.chunk_count) totalChunkCount += doc.chunk_count;
+                if (doc.status === 'completed') indexedCount++;
+            });
+            
+            totalDocs.textContent = detailedDocs.length;
+            totalChunks.textContent = totalChunkCount;
+            totalSize.textContent = formatBytes(totalSizeBytes);
+            indexedDocs.textContent = indexedCount;
+            
+            // Render document cards
+            documentsGrid.innerHTML = detailedDocs.map(doc => renderDocumentCard(doc)).join('');
+            
+            // Add event listeners for delete buttons
+            document.querySelectorAll('.delete-doc-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const docId = btn.getAttribute('data-doc-id');
+                    const filename = btn.getAttribute('data-filename');
+                    deleteDocument(docId, filename);
+                });
+            });
+            
+        } catch (error) {
+            console.error('Failed to load collections:', error);
+            collectionsEmpty.classList.remove('hidden');
+            documentsGrid.classList.add('hidden');
+        }
+    }
+    
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    function renderDocumentCard(doc) {
+        const status = doc.status || 'unknown';
+        const statusColors = {
+            completed: 'success',
+            processing: 'warning',
+            failed: 'error',
+            unknown: 'on-surface-variant'
+        };
+        const statusColor = statusColors[status] || 'on-surface-variant';
+        const statusIcon = status === 'completed' ? 'check_circle' : status === 'failed' ? 'error' : 'pending';
+        
+        const fileType = (doc.file_type || doc.filename?.split('.').pop() || 'unknown').replace('.', '').toUpperCase();
+        const fileName = doc.filename || 'Unknown';
+        const fileSize = doc.file_size_bytes ? formatBytes(doc.file_size_bytes) : 'Unknown';
+        const chunkCount = doc.chunk_count || 0;
+        const wordCount = doc.word_count || 0;
+        
+        // Format dates properly
+        const createdAt = doc.created_at ? new Date(doc.created_at).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }) : 'Unknown';
+        
+        const updatedAt = doc.updated_at ? new Date(doc.updated_at).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }) : 'Unknown';
+        
+        return `
+            <div class="glass-level-2 rounded-xl p-6 hover:bg-white/[0.07] transition-all document-card" data-doc-id="${doc.document_id}">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <div class="w-12 h-12 rounded-lg glass-level-3 flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-primary text-[24px]">description</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-[16px] font-semibold text-on-surface truncate" title="${fileName}">${fileName}</h3>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="material-symbols-outlined text-${statusColor} text-[16px]">${statusIcon}</span>
+                                <span class="text-[12px] font-['JetBrains_Mono'] text-${statusColor} uppercase">${status}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="text-on-surface-variant hover:text-error transition-colors delete-doc-btn flex-shrink-0" data-doc-id="${doc.document_id}" data-filename="${fileName}" title="Delete document">
+                        <span class="material-symbols-outlined text-[20px]">delete</span>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                        <p class="text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase mb-1">Type</p>
+                        <p class="text-[14px] text-on-surface font-semibold">${fileType}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase mb-1">Size</p>
+                        <p class="text-[14px] text-on-surface font-semibold">${fileSize}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase mb-1">Chunks</p>
+                        <p class="text-[14px] text-on-surface font-semibold">${chunkCount}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-['JetBrains_Mono'] text-on-surface-variant uppercase mb-1">Words</p>
+                        <p class="text-[14px] text-on-surface font-semibold">${wordCount.toLocaleString()}</p>
+                    </div>
+                </div>
+                
+                <details class="glass-level-1 rounded-lg p-4">
+                    <summary class="cursor-pointer text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase flex items-center gap-2 hover:text-on-surface transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">info</span>
+                        Detailed Metadata
+                    </summary>
+                    <div class="mt-4 space-y-2 text-[12px] font-['JetBrains_Mono']">
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">Document ID:</span>
+                            <span class="text-on-surface text-right truncate ml-2" title="${doc.document_id}">${doc.document_id ? doc.document_id.substring(0, 16) + '...' : 'Unknown'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">Upload Time:</span>
+                            <span class="text-on-surface text-right">${createdAt}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">Last Updated:</span>
+                            <span class="text-on-surface text-right">${updatedAt}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">Embedding Model:</span>
+                            <span class="text-on-surface text-right">nomic-embed-text-v1.5</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">Chunk Size:</span>
+                            <span class="text-on-surface text-right">800 chars</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">Overlap:</span>
+                            <span class="text-on-surface text-right">100 chars</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">Vectors:</span>
+                            <span class="text-on-surface text-right">${chunkCount} (Qdrant)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">Database:</span>
+                            <span class="text-success text-right">✓ PostgreSQL</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-on-surface-variant">Indexing Status:</span>
+                            <span class="text-${statusColor} text-right uppercase font-semibold">${status}</span>
+                        </div>
+                    </div>
+                </details>
+            </div>
+        `;
+    }
+    
+    // Delete document function
+    async function deleteDocument(docId, filename) {
+        if (!confirm(`Are you sure you want to delete "${filename}"?\n\nThis will remove:\n- The document record\n- All ${' '}chunks\n- All embeddings\n\nThis action cannot be undone.`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/ingest/documents/${docId}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                // Show success notification
+                showNotification('Document deleted successfully', 'success');
+                // Remove card from UI
+                const card = document.querySelector(`.document-card[data-doc-id="${docId}"]`);
+                if (card) {
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(() => card.remove(), 300);
+                }
+                // Reload collections after a short delay
+                setTimeout(() => loadCollections(), 500);
+            } else {
+                const error = await response.json().catch(() => ({}));
+                showNotification(`Failed to delete document: ${error.detail || 'Unknown error'}`, 'error');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            showNotification('Failed to delete document: Network error', 'error');
+        }
+    }
+    
+    // Show notification function
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        const bgColor = type === 'success' ? 'bg-success/20 border-success/40' : 
+                        type === 'error' ? 'bg-error/20 border-error/40' : 
+                        'bg-primary/20 border-primary/40';
+        const textColor = type === 'success' ? 'text-success' : 
+                          type === 'error' ? 'text-error' : 
+                          'text-primary';
+        
+        notification.className = `fixed bottom-4 right-4 px-6 py-4 rounded-xl ${bgColor} border ${textColor} font-['JetBrains_Mono'] text-[14px] z-50 backdrop-blur-xl`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateY(20px)';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+    
+    // Upload functionality
+    uploadBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', async (e) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+        
+        console.log(`Uploading ${files.length} file(s)...`);
+        
+        // Create glassmorphic upload status card
+        const uploadCard = document.createElement('div');
+        uploadCard.className = 'fixed top-4 right-4 w-96 glass-level-3 rounded-2xl p-6 z-50 space-blue-light';
+        uploadCard.innerHTML = `
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg space-blue flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-[20px]">upload_file</span>
+                    </div>
+                    <div>
+                        <h3 class="text-[16px] font-semibold text-on-surface">Uploading Documents</h3>
+                        <p class="text-[12px] font-['JetBrains_Mono'] text-space-blue" id="upload-count">Preparing...</p>
+                    </div>
+                </div>
+            </div>
+            <div id="upload-files-list" class="space-y-2 mb-4"></div>
+            <div class="space-y-2">
+                <div class="flex justify-between text-[11px] font-['JetBrains_Mono'] text-on-surface-variant">
+                    <span id="upload-status-text">Initializing...</span>
+                    <span id="upload-percentage">0%</span>
+                </div>
+                <div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                    <div id="upload-progress-bar" class="h-full space-blue transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(uploadCard);
+        
+        const filesList = document.getElementById('upload-files-list');
+        const uploadCount = document.getElementById('upload-count');
+        const statusText = document.getElementById('upload-status-text');
+        const percentage = document.getElementById('upload-percentage');
+        const progressBar = document.getElementById('upload-progress-bar');
+        
+        let successCount = 0;
+        let errorCount = 0;
+        
+        // Create file status items
+        const fileItems = {};
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileItem = document.createElement('div');
+            fileItem.className = 'flex items-center gap-2 glass-level-1 rounded-lg p-2';
+            fileItem.innerHTML = `
+                <span class="material-symbols-outlined text-[16px] text-space-blue" id="file-icon-${i}">pending</span>
+                <span class="text-[12px] text-on-surface flex-1 truncate">${file.name}</span>
+                <span class="text-[10px] font-['JetBrains_Mono'] text-on-surface-variant">${formatBytes(file.size)}</span>
+            `;
+            filesList.appendChild(fileItem);
+            fileItems[i] = fileItem;
+        }
+        
+        uploadCount.textContent = `0 of ${files.length} completed`;
+        
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileIcon = document.getElementById(`file-icon-${i}`);
+            
+            // Update status
+            statusText.textContent = `Uploading ${file.name}...`;
+            fileIcon.textContent = 'sync';
+            fileIcon.className = 'material-symbols-outlined text-[16px] text-space-blue animate-spin';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/ingest/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log(`✓ ${file.name}:`, result);
+                    successCount++;
+                    
+                    // Success icon
+                    fileIcon.textContent = 'check_circle';
+                    fileIcon.className = 'material-symbols-outlined text-[16px] text-success';
+                    
+                    // Add comprehensive metadata to file item
+                    const metadata = document.createElement('div');
+                    metadata.className = 'mt-2 pl-6 space-y-1';
+                    
+                    let metadataHTML = '';
+                    const meta = result.metadata || {};
+                    
+                    // Status badge with icon
+                    const statusInfo = {
+                        'new': { color: 'text-space-blue', icon: '✦', label: 'NEW' },
+                        'modified': { color: 'text-warning', icon: '⟳', label: 'MODIFIED' },
+                        'unchanged': { color: 'text-on-surface-variant', icon: '⊘', label: 'UNCHANGED' }
+                    };
+                    const status = statusInfo[result.status] || statusInfo['new'];
+                    
+                    metadataHTML += `
+                        <div class="flex items-center gap-2 text-[10px] font-['JetBrains_Mono']">
+                            <span class="${status.color}">${status.icon}</span>
+                            <span class="${status.color} font-semibold">${status.label}</span>
+                        </div>
+                    `;
+                    
+                    // Detailed ingestion info
+                    metadataHTML += `<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] font-['JetBrains_Mono'] text-on-surface-variant">`;
+                    
+                    // Chunks created
+                    if (result.chunks_created !== undefined) {
+                        metadataHTML += `
+                            <div class="flex justify-between">
+                                <span>Chunks:</span>
+                                <span class="text-on-surface font-semibold">${result.chunks_created}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    // For modified documents, show old chunk count and difference
+                    if (result.status === 'modified' && meta.old_chunk_count !== undefined) {
+                        metadataHTML += `
+                            <div class="flex justify-between">
+                                <span>Old Chunks:</span>
+                                <span class="text-on-surface-variant">${meta.old_chunk_count}</span>
+                            </div>
+                            <div class="flex justify-between col-span-2">
+                                <span>Chunks Changed:</span>
+                                <span class="text-warning font-semibold">${meta.chunks_changed > 0 ? '+' : ''}${meta.chunks_changed}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    // Word count
+                    if (meta.word_count) {
+                        metadataHTML += `
+                            <div class="flex justify-between">
+                                <span>Words:</span>
+                                <span class="text-on-surface">${meta.word_count.toLocaleString()}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    // Character count
+                    if (meta.character_count) {
+                        metadataHTML += `
+                            <div class="flex justify-between">
+                                <span>Characters:</span>
+                                <span class="text-on-surface">${meta.character_count.toLocaleString()}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    // Processing status
+                    if (result.skipped) {
+                        metadataHTML += `
+                            <div class="flex justify-between">
+                                <span>Processing:</span>
+                                <span class="text-on-surface-variant">Skipped</span>
+                            </div>
+                        `;
+                    } else {
+                        metadataHTML += `
+                            <div class="flex justify-between">
+                                <span>Processing:</span>
+                                <span class="text-success">Completed</span>
+                            </div>
+                        `;
+                    }
+                    
+                    // Document ID (shortened)
+                    if (result.document_id) {
+                        metadataHTML += `
+                            <div class="flex justify-between col-span-2">
+                                <span>Doc ID:</span>
+                                <span class="text-on-surface font-mono">${result.document_id.substring(0, 12)}...</span>
+                            </div>
+                        `;
+                    }
+                    
+                    // Parser info from backend metadata
+                    const parser = meta.parser || 'Unknown';
+                    metadataHTML += `
+                        <div class="flex justify-between">
+                            <span>Parser:</span>
+                            <span class="text-on-surface">${parser}</span>
+                        </div>
+                    `;
+                    
+                    // Chunker settings
+                    if (meta.chunker) {
+                        metadataHTML += `
+                            <div class="flex justify-between">
+                                <span>Chunker:</span>
+                                <span class="text-on-surface">${meta.chunker}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    // Embedding model
+                    const embeddingModel = meta.embedding_model || 'Unknown';
+                    metadataHTML += `
+                        <div class="flex justify-between">
+                            <span>Embeddings:</span>
+                            <span class="text-on-surface">${embeddingModel}</span>
+                        </div>
+                    `;
+                    
+                    // Vector count
+                    if (meta.vector_count !== undefined) {
+                        metadataHTML += `
+                            <div class="flex justify-between">
+                                <span>Vectors:</span>
+                                <span class="text-on-surface">${meta.vector_count}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    // Storage confirmation
+                    if (meta.storage) {
+                        metadataHTML += `
+                            <div class="flex justify-between">
+                                <span>PostgreSQL:</span>
+                                <span class="text-success">✓ ${meta.storage.postgresql}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Qdrant:</span>
+                                <span class="text-success">✓ ${meta.storage.qdrant}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    metadataHTML += `</div>`;
+                    
+                    // Performance timings section
+                    if (meta.timings) {
+                        metadataHTML += `
+                            <div class="mt-2 pt-2 border-t border-white/10">
+                                <div class="text-[9px] font-['JetBrains_Mono'] text-on-surface-variant uppercase mb-1">⏱ Performance</div>
+                                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] font-['JetBrains_Mono'] text-on-surface-variant">
+                                    <div class="flex justify-between">
+                                        <span>Parse:</span>
+                                        <span class="text-on-surface">${meta.timings.parse_time_ms}ms</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Chunk:</span>
+                                        <span class="text-on-surface">${meta.timings.chunk_time_ms}ms</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Embed:</span>
+                                        <span class="text-on-surface">${meta.timings.embed_time_ms}ms</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Store:</span>
+                                        <span class="text-on-surface">${meta.timings.store_time_ms}ms</span>
+                                    </div>
+                                    <div class="flex justify-between col-span-2 pt-1 border-t border-white/5">
+                                        <span class="font-semibold">Total:</span>
+                                        <span class="text-space-blue font-semibold">${meta.timings.total_time_ms}ms</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Special message for modified documents
+                    if (result.status === 'modified') {
+                        const reason = meta.reason || 'Content changed - Previous version replaced';
+                        metadataHTML += `
+                            <div class="mt-2 p-2 space-blue-light rounded text-[10px] font-['JetBrains_Mono'] text-space-blue">
+                                ℹ️ ${reason}
+                            </div>
+                        `;
+                    }
+                    
+                    // Special message for unchanged documents
+                    if (result.status === 'unchanged') {
+                        const reason = meta.reason || 'Duplicate detected - No re-indexing needed';
+                        metadataHTML += `
+                            <div class="mt-2 p-2 glass-level-1 rounded text-[10px] font-['JetBrains_Mono'] text-on-surface-variant">
+                                ℹ️ ${reason}
+                            </div>
+                        `;
+                    }
+                    
+                    metadata.innerHTML = metadataHTML;
+                    fileItems[i].appendChild(metadata);
+                    fileItems[i].classList.add('space-blue-light');
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error(`✗ ${file.name}: HTTP ${response.status}`, errorData);
+                    errorCount++;
+                    
+                    // Error icon
+                    fileIcon.textContent = 'error';
+                    fileIcon.className = 'material-symbols-outlined text-[16px] text-error';
+                    
+                    // Add error details
+                    const errorDetails = document.createElement('div');
+                    errorDetails.className = 'mt-2 pl-6 text-[10px] font-["JetBrains_Mono"] text-error space-y-1';
+                    
+                    let errorHTML = `<div>Status: <span class="font-semibold">FAILED (${response.status})</span></div>`;
+                    
+                    if (errorData.detail) {
+                        const detail = typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail);
+                        errorHTML += `<div>Reason: ${detail.substring(0, 100)}</div>`;
+                    } else if (response.status === 422) {
+                        errorHTML += `<div>Reason: Validation failed (unsupported format or corrupted)</div>`;
+                    } else if (response.status === 413) {
+                        errorHTML += `<div>Reason: File too large</div>`;
+                    } else if (response.status === 500) {
+                        errorHTML += `<div>Reason: Server error (check backend logs)</div>`;
+                    }
+                    
+                    errorDetails.innerHTML = errorHTML;
+                    fileItems[i].appendChild(errorDetails);
+                }
+            } catch (error) {
+                console.error(`✗ ${file.name}:`, error);
+                errorCount++;
+                
+                // Error icon
+                fileIcon.textContent = 'error';
+                fileIcon.className = 'material-symbols-outlined text-[16px] text-error';
+                
+                // Add network error details
+                const errorDetails = document.createElement('div');
+                errorDetails.className = 'mt-2 pl-6 text-[10px] font-["JetBrains_Mono"] text-error';
+                errorDetails.innerHTML = `<div>Status: <span class="font-semibold">NETWORK ERROR</span></div><div>Reason: Backend unreachable or timeout</div>`;
+                fileItems[i].appendChild(errorDetails);
+            }
+            
+            // Update progress
+            const progress = Math.round(((i + 1) / files.length) * 100);
+            percentage.textContent = `${progress}%`;
+            progressBar.style.width = `${progress}%`;
+            uploadCount.textContent = `${i + 1} of ${files.length} completed`;
+        }
+        
+        // Show final status
+        statusText.textContent = 'Upload Complete';
+        uploadCard.querySelector('h3').textContent = 'Upload Complete';
+        uploadCard.querySelector('.space-blue').innerHTML = `
+            <span class="material-symbols-outlined text-white text-[20px]">check_circle</span>
+        `;
+        
+        // Add summary
+        const summary = document.createElement('div');
+        summary.className = 'mt-4 pt-4 border-t border-white/10 flex justify-between text-[12px] font-[\'JetBrains_Mono\']';
+        summary.innerHTML = `
+            <span class="text-success">✓ ${successCount} successful</span>
+            ${errorCount > 0 ? `<span class="text-error">✗ ${errorCount} failed</span>` : ''}
+        `;
+        uploadCard.appendChild(summary);
+        
+        // Add close button
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'mt-4 w-full py-2 glass-level-2 rounded-lg text-[12px] font-[\'JetBrains_Mono\'] text-on-surface hover:bg-white/10 transition-all';
+        closeBtn.textContent = 'Close';
+        closeBtn.onclick = () => uploadCard.remove();
+        uploadCard.appendChild(closeBtn);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            uploadCard.remove();
+        }, 10000);
+        
+        // Clear file input
+        fileInput.value = '';
+        
+        // Refresh collections if currently viewing
+        if (currentState === 'collections') {
+            await loadCollections();
+        }
+    });
+    
+    // Modal functionality
+    navCollections.addEventListener('click', (e) => {
+        e.preventDefault();
+        modelModal.classList.remove('hidden');
+        
+        // Set current values
+        llmProviderSelect.value = llmConfig.provider;
+        updateProviderConfig(llmConfig.provider);
+        
+        if (llmConfig.provider === 'ollama') {
+            document.getElementById('ollama-model').value = llmConfig.model;
+            document.getElementById('ollama-url').value = llmConfig.baseUrl;
+        } else if (llmConfig.provider === 'nvidia') {
+            document.getElementById('nvidia-model').value = llmConfig.model;
+            if (llmConfig.apiKey) document.getElementById('nvidia-key').value = llmConfig.apiKey;
+        } else if (llmConfig.provider === 'openai') {
+            document.getElementById('openai-model').value = llmConfig.model;
+            if (llmConfig.apiKey) document.getElementById('openai-key').value = llmConfig.apiKey;
+        } else if (llmConfig.provider === 'anthropic') {
+            document.getElementById('anthropic-model').value = llmConfig.model;
+            if (llmConfig.apiKey) document.getElementById('anthropic-key').value = llmConfig.apiKey;
+        }
+    });
+    
+    closeModal.addEventListener('click', () => {
+        modelModal.classList.add('hidden');
+    });
+    
+    modelModal.addEventListener('click', (e) => {
+        if (e.target === modelModal) {
+            modelModal.classList.add('hidden');
+        }
+    });
+    
+    llmProviderSelect.addEventListener('change', (e) => {
+        updateProviderConfig(e.target.value);
+    });
+    
+    function updateProviderConfig(provider) {
+        ollamaConfig.classList.add('hidden');
+        nvidiaConfig.classList.add('hidden');
+        openaiConfig.classList.add('hidden');
+        anthropicConfig.classList.add('hidden');
+        
+        if (provider === 'ollama') {
+            ollamaConfig.classList.remove('hidden');
+        } else if (provider === 'nvidia') {
+            nvidiaConfig.classList.remove('hidden');
+        } else if (provider === 'openai') {
+            openaiConfig.classList.remove('hidden');
+        } else if (provider === 'anthropic') {
+            anthropicConfig.classList.remove('hidden');
+        }
+    }
+    
+    saveModel.addEventListener('click', () => {
+        const provider = llmProviderSelect.value;
+        let model, apiKey, baseUrl;
+        
+        if (provider === 'ollama') {
+            model = document.getElementById('ollama-model').value;
+            baseUrl = document.getElementById('ollama-url').value;
+            apiKey = null;
+        } else if (provider === 'nvidia') {
+            model = document.getElementById('nvidia-model').value;
+            apiKey = document.getElementById('nvidia-key').value;
+        } else if (provider === 'openai') {
+            model = document.getElementById('openai-model').value;
+            apiKey = document.getElementById('openai-key').value;
+        } else if (provider === 'anthropic') {
+            model = document.getElementById('anthropic-model').value;
+            apiKey = document.getElementById('anthropic-key').value;
+        }
+        
+        llmConfig = { provider, model, apiKey, baseUrl };
+        localStorage.setItem('llm_config', JSON.stringify(llmConfig));
+        
+        modelModal.classList.add('hidden');
+        
+        // Show success notification
+        alert(`✓ Model settings saved: ${provider} - ${model}`);
+    });
+    
+    // Micro-interactions
+    document.querySelectorAll('button').forEach(button => {
+        button.addEventListener('mousedown', () => {
+            button.style.transform = 'scale(0.95)';
+        });
+        button.addEventListener('mouseup', () => {
+            button.style.transform = 'scale(1)';
+        });
+        button.addEventListener('mouseleave', () => {
+            button.style.transform = 'scale(1)';
+        });
+    });
+</script>
+</body>
+</html>

@@ -175,6 +175,7 @@ async def get_hybrid_retriever() -> HybridRetriever:
         retrievers=[dense_retriever, bm25_retriever],
         rrf_k=settings.retrieval.rrf_k,
         default_top_k=settings.retrieval.hybrid_top_k,
+        min_score=settings.retrieval.hybrid_min_score,
     )
 
 

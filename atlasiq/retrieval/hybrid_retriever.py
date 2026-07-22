@@ -40,6 +40,7 @@ class HybridRetriever:
         retrievers: Sequence[Retriever],
         rrf_k: int,
         default_top_k: int,
+        min_score: float = 0.0,
     ) -> None:
         """Initialise the hybrid retriever.
 
@@ -49,6 +50,9 @@ class HybridRetriever:
                 Must contain at least one retriever.
             rrf_k: The RRF constant (dampens the contribution of lower ranks).
             default_top_k: Final result count when ``top_k`` is omitted.
+            min_score: Minimum RRF score threshold for filtering weak results.
+                Chunks scoring below this are excluded from final results.
+                Default 0.0 (no filtering). Typical value: 0.011-0.013.
 
         Raises:
             ValueError: If ``retrievers`` is empty (fail fast rather than
@@ -60,31 +64,68 @@ class HybridRetriever:
         self._retrievers = list(retrievers)
         self._rrf_k = rrf_k
         self._default_top_k = default_top_k
+        self._min_score = min_score
 
     def retrieve(self, question: str, top_k: int | None = None) -> list[ScoredChunkRef]:
         """Retrieve, fuse, and return the top chunks for a question.
 
         Orchestration only: (1) gather each retriever's candidates, (2) fuse
-        their rankings via RRF, (3) return the final ``top_k``.
+        their rankings via RRF, (3) optionally filter by minimum score, (4)
+        return the final ``top_k``.
 
         Args:
             question: The natural-language query.
             top_k: Final result count; falls back to the configured default.
 
         Returns:
-            Fused scored chunk references (RRF score) in descending order.
+            Fused scored chunk references (RRF score) in descending order,
+            optionally filtered by minimum score threshold.
         """
+        logger.debug("Hybrid retrieval query: %s", question[:100])
+        
         candidate_lists = [retriever.retrieve(question) for retriever in self._retrievers]
+        
+        # Log individual retriever results
+        for i, candidates in enumerate(candidate_lists):
+            retriever_name = type(self._retrievers[i]).__name__
+            logger.debug(
+                "%s returned %d chunks (top scores: %s)",
+                retriever_name,
+                len(candidates),
+                [f"{ref.score:.4f}" for ref in candidates[:3]] if candidates else "[]",
+            )
+        
         fused = self._fuse_rrf(candidate_lists)
+        
+        # Apply minimum score filtering if configured
+        if self._min_score > 0:
+            pre_filter_count = len(fused)
+            fused = [ref for ref in fused if ref.score >= self._min_score]
+            if len(fused) < pre_filter_count:
+                logger.debug(
+                    "Filtered %d weak chunks (score < %.4f), %d remaining",
+                    pre_filter_count - len(fused),
+                    self._min_score,
+                    len(fused),
+                )
+        
         k = top_k if top_k is not None else self._default_top_k
 
+        # Log fusion results
+        logger.debug(
+            "RRF fusion: %d unique chunks, top scores: %s",
+            len(fused),
+            [f"{ref.score:.4f}" for ref in fused[:5]] if fused else "[]",
+        )
+        
+        final_results = fused[:k]
         logger.info(
-            "Hybrid retrieval fused %d lists into %d unique chunks (returning %d)",
+            "Hybrid retrieval fused %d lists into %d unique chunks (returning %d after filtering)",
             len(candidate_lists),
             len(fused),
-            min(k, len(fused)),
+            len(final_results),
         )
-        return fused[:k]
+        return final_results
 
     def _fuse_rrf(
         self, ranked_lists: Sequence[Sequence[ScoredChunkRef]]

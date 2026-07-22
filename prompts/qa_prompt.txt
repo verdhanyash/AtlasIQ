@@ -8,8 +8,8 @@ Question: {question}
 Instructions:
 - Answer using ONLY the information in the context above.
 - If the context does not contain enough information, say "I don't have enough information to answer this question based on the available documents."
-- Cite the source document and page number for each claim.
-- Format citations as [Source: document_name, Page: page_number].
+- Do NOT include any citations, source references, or page numbers in your answer. Write only the answer itself in clean prose.
+- The system will automatically handle citations separately.
 - Be concise and direct.
 
 Answer:

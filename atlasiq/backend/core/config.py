@@ -134,6 +134,7 @@ class RetrievalConfig(BaseSettings):
     rerank_top_k: int = 5
     rrf_k: int = 60
     min_confidence_score: float = 0.1
+    hybrid_min_score: float = 0.0
 
 
 class RerankerConfig(BaseSettings):
@@ -160,7 +161,7 @@ class LLMConfig(BaseSettings):
     @classmethod
     def validate_provider(cls, v: str) -> str:
         """Ensure the LLM provider is one of the supported options."""
-        allowed = {"ollama", "nvidia", "openai"}
+        allowed = {"ollama", "nvidia", "openai", "mock"}
         if v not in allowed:
             msg = f"LLM provider must be one of {allowed}, got '{v}'"
             raise ValueError(msg)
