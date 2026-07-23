@@ -1412,6 +1412,9 @@
                 const result = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
                     
+                    // Set timeout for large files (5 minutes)
+                    xhr.timeout = 300000; // 5 minutes in milliseconds
+                    
                     let lastUpdate = 0;
                     const UPDATE_INTERVAL = 50; // Update every 50ms minimum
                     
@@ -1451,14 +1454,21 @@
                     
                     xhr.addEventListener('load', () => {
                         if (xhr.status >= 200 && xhr.status < 300) {
+                            // Upload complete, now processing on backend
+                            statusText.textContent = `Processing ${file.name}...`;
+                            progressBar.classList.add('animate-pulse');
                             resolve(JSON.parse(xhr.responseText));
                         } else {
-                            reject(new Error(`Upload failed: ${xhr.statusText}`));
+                            reject(new Error(`Upload failed: HTTP ${xhr.status}`));
                         }
                     });
                     
                     xhr.addEventListener('error', () => {
                         reject(new Error('Network error during upload'));
+                    });
+                    
+                    xhr.addEventListener('timeout', () => {
+                        reject(new Error('Upload timed out after 5 minutes'));
                     });
                     
                     xhr.open('POST', `${API_BASE_URL}/ingest/upload`);
