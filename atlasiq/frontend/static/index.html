@@ -1362,8 +1362,8 @@
                     <span id="upload-status-text">Initializing...</span>
                     <span id="upload-percentage">0%</span>
                 </div>
-                <div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                    <div id="upload-progress-bar" class="h-full space-blue transition-all duration-300" style="width: 0%"></div>
+                <div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+                    <div id="upload-progress-bar" class="h-full space-blue transition-none" style="width: 0%"></div>
                 </div>
             </div>
         `;
@@ -1412,19 +1412,41 @@
                 const result = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
                     
+                    let lastUpdate = 0;
+                    const UPDATE_INTERVAL = 50; // Update every 50ms minimum
+                    
+                    // For very small files, artificially slow down to show progress
+                    const isSmallFile = file.size < 500000; // Less than 500KB
+                    
                     // Track upload progress
                     xhr.upload.addEventListener('progress', (e) => {
                         if (e.lengthComputable) {
-                            const fileProgress = (e.loaded / e.total) * 100;
+                            const now = Date.now();
+                            // Throttle updates to avoid excessive DOM manipulation
+                            if (now - lastUpdate < UPDATE_INTERVAL) return;
+                            lastUpdate = now;
+                            
+                            let fileProgress = (e.loaded / e.total) * 100;
+                            
+                            // For small files, show progress more gradually
+                            if (isSmallFile && fileProgress > 0 && fileProgress < 100) {
+                                fileProgress = Math.min(fileProgress, 95); // Cap at 95% until complete
+                            }
+                            
                             const overallProgress = ((i + (fileProgress / 100)) / files.length) * 100;
                             
-                            // Update progress bar
-                            progressBar.style.width = `${overallProgress}%`;
-                            percentage.textContent = `${Math.round(overallProgress)}%`;
-                            
-                            // Update file-specific progress
-                            statusText.textContent = `Uploading ${file.name}... ${Math.round(fileProgress)}%`;
+                            // Force immediate update without CSS transitions
+                            requestAnimationFrame(() => {
+                                progressBar.style.width = `${overallProgress}%`;
+                                percentage.textContent = `${Math.round(overallProgress)}%`;
+                                statusText.textContent = `Uploading ${file.name}... ${Math.round(fileProgress)}%`;
+                            });
                         }
+                    });
+                    
+                    // Start progress immediately when upload begins
+                    xhr.upload.addEventListener('loadstart', () => {
+                        statusText.textContent = `Starting ${file.name}...`;
                     });
                     
                     xhr.addEventListener('load', () => {
