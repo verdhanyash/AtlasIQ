@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+
 
 from atlasiq.backend.core.config import Settings
 from atlasiq.backend.core.dependencies import (
@@ -83,3 +85,57 @@ async def check_config(
         "current_provider": settings.llm.provider,
         "current_model": settings.llm.model,
     }
+
+
+class ConfigUpdateRequest(BaseModel):
+    """Request model for dynamic configuration updates."""
+
+    provider: str
+    model: str
+    api_key: str | None = None
+    base_url: str | None = None
+
+
+@router.post("/config")
+async def update_config(
+    req: ConfigUpdateRequest,
+    settings: Settings = Depends(get_settings),
+) -> dict[str, Any]:
+    """Update active LLM provider and model configuration dynamically.
+
+    Args:
+        req: ConfigUpdateRequest with provider, model, and optional credentials.
+        settings: Application settings singleton.
+
+    Returns:
+        Status dict with updated provider and model.
+    """
+    settings.llm.provider = req.provider
+    settings.llm.model = req.model
+
+    if req.api_key:
+        if req.provider == "nvidia":
+            settings.nvidia.api_key = req.api_key
+        elif req.provider == "openai":
+            settings.openai.api_key = req.api_key
+        elif req.provider == "anthropic":
+            settings.anthropic.api_key = req.api_key
+
+    if req.base_url and req.provider == "ollama":
+        settings.ollama.base_url = req.base_url
+
+    from atlasiq.backend.core.dependencies import reset_llm_provider_cache
+
+    await reset_llm_provider_cache()
+
+    logger.info(
+        "Updated LLM configuration dynamically: provider=%s, model=%s",
+        settings.llm.provider,
+        settings.llm.model,
+    )
+    return {
+        "status": "success",
+        "current_provider": settings.llm.provider,
+        "current_model": settings.llm.model,
+    }
+

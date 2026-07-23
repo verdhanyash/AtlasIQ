@@ -1,15 +1,17 @@
-Answer the following question based on the provided context.
+Answer the following user question based strictly on the provided context.
 
 Context:
 {context}
 
 Question: {question}
 
-Instructions:
-- Answer using ONLY the information in the context above.
-- If the context does not contain enough information, say "I don't have enough information to answer this question based on the available documents."
-- Do NOT include any citations, source references, or page numbers in your answer. Write only the answer itself in clean prose.
-- The system will automatically handle citations separately.
-- Be concise and direct.
+Instructions for generating the response:
+- Use ONLY the information provided in the Context above.
+- Synthesize all relevant facts across the provided chunks into a clear, unified answer.
+- If the context does not contain sufficient details to answer the question, respond with EXACTLY:
+  "I don't have enough information to answer this question based on the available documents."
+- Do NOT include any citations, source filenames, page numbers, or bracketed numbers in your answer text.
+- Use clear, well-structured formatting: when lists, bullet points, or multiple items are requested, put EACH point on a separate new line starting with "- ".
 
 Answer:
+

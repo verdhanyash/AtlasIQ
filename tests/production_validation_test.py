@@ -6,7 +6,7 @@ from pathlib import Path
 
 BASE_URL = "http://localhost:8000"
 
-def test_health():
+def run_health_check():
     """Test backend health check."""
     print("\n=== HEALTH CHECK ===")
     response = requests.get(f"{BASE_URL}/health")
@@ -17,7 +17,7 @@ def test_health():
     print(f"LLM Provider: {data['checks']['llm_provider']}")
     return response.status_code == 200
 
-def test_query(question: str):
+def run_query(question: str):
     """Test query endpoint."""
     print(f"\n=== QUERY TEST: {question[:50]}... ===")
     response = requests.post(

@@ -188,10 +188,18 @@ class DocumentEmbedder:
         try:
             from sentence_transformers import SentenceTransformer
 
-            self._model = SentenceTransformer(
-                self.model_name,
-                device=self.device,
-            )
+            try:
+                self._model = SentenceTransformer(
+                    self.model_name,
+                    device=self.device,
+                )
+            except Exception as online_err:
+                logger.warning("Online load failed for '%s' (%s), attempting local cache load...", self.model_name, online_err)
+                self._model = SentenceTransformer(
+                    self.model_name,
+                    device=self.device,
+                    local_files_only=True,
+                )
             logger.info("Embedding model loaded successfully")
         except ImportError as e:
             raise EmbeddingError(

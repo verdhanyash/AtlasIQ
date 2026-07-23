@@ -105,8 +105,8 @@ class TestMinimumQueryLength:
 
     @pytest.mark.asyncio()
     async def test_two_char_refused(self, pipeline: QueryPipeline) -> None:
-        """Two-character query 'ab' is refused."""
-        response = await pipeline.answer("ab")
+        """Single-character query 'a' is refused."""
+        response = await pipeline.answer("a")
 
         assert response.answer == _REFUSAL
         assert response.refusal_reason == "query_too_short"

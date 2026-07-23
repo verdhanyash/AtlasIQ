@@ -274,3 +274,16 @@ async def invalidate_bm25_retriever() -> None:
         logger.debug("BM25 cache invalidation completed under synchronization")
 
     logger.info("BM25 cache invalidated")
+
+
+async def reset_llm_provider_cache() -> None:
+    """Clear the cached LLM provider, answer generator, and query pipeline singletons."""
+    global _query_pipeline
+
+    async with _query_pipeline_lock:
+        _query_pipeline = None
+
+    get_llm_provider.cache_clear()
+    get_answer_generator.cache_clear()
+    logger.info("LLM provider cache cleared due to configuration update")
+

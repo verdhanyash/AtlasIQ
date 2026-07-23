@@ -83,10 +83,59 @@ class DocumentParser:
         return file_path.read_text(encoding="utf-8")
 
     def _parse_with_docling(self, file_path: Path) -> str:
-        """Parse a rich document via IBM Docling and return Markdown."""
+        """Parse a rich document via IBM Docling, with pypdf fallback for PDFs."""
         converter = self._get_converter()
-        result = converter.convert(str(file_path))
-        return str(result.document.export_to_markdown())
+        docling_error = None
+
+        try:
+            result = converter.convert(str(file_path))
+            text = str(result.document.export_to_markdown())
+            if text and text.strip():
+                return text
+        except Exception as exc:
+            docling_error = exc
+            logger.warning("Docling conversion failed for '%s': %s. Attempting fallback parser.", file_path.name, exc)
+
+        if file_path.suffix.lower() == ".pdf":
+            try:
+                fallback_text = self._fallback_pdf_extract(file_path)
+                if fallback_text and fallback_text.strip():
+                    return fallback_text
+            except Exception as fallback_exc:
+                if docling_error:
+                    msg = f"Failed to parse '{file_path.name}': {docling_error}"
+                    raise DocumentParsingError(msg) from docling_error
+                raise DocumentParsingError(f"Parsed document is empty: '{file_path.name}'") from fallback_exc
+
+        if docling_error:
+            msg = f"Failed to parse '{file_path.name}': {docling_error}"
+            raise DocumentParsingError(msg) from docling_error
+            
+        raise DocumentParsingError(f"Parsed document is empty: '{file_path.name}'")
+
+
+
+    @staticmethod
+    def _fallback_pdf_extract(file_path: Path) -> str:
+        """Fallback page-by-page PDF text extractor using pypdf."""
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(str(file_path))
+            pages_text = []
+            for i, page in enumerate(reader.pages):
+                page_content = page.extract_text() or ""
+                if page_content.strip():
+                    pages_text.append(f"## Page {i + 1}\n\n{page_content.strip()}")
+            
+            full_text = "\n\n".join(pages_text)
+            if not full_text.strip():
+                raise DocumentParsingError(f"No extractable text found in PDF: '{file_path.name}'")
+            
+            logger.info("Fallback PDF parsing succeeded for %s (%d pages, %d chars)", file_path.name, len(reader.pages), len(full_text))
+            return full_text
+        except Exception as e:
+            raise DocumentParsingError(f"PDF fallback parsing failed for '{file_path.name}': {e}") from e
+
 
     def _get_converter(self) -> Any:
         """Lazily create and cache the Docling DocumentConverter.

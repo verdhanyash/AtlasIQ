@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 # Minimum query length (in characters) to proceed with retrieval.
 # Queries shorter than this are meaningless natural-language questions.
-_MIN_QUERY_LENGTH = 3
+_MIN_QUERY_LENGTH = 2
 
 # Refusal message for invalid queries (matches the guardrail contract).
 _INVALID_QUERY_REFUSAL = (

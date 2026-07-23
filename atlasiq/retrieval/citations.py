@@ -48,8 +48,8 @@ class Citation:
     document_name: str
     page: str
     quote: str
-    chunk_index: int
-    score: float
+    chunk_index: int = 0
+    score: float = 0.0
 
 
 def _format_page_range(start_page: int | None, end_page: int | None) -> str:
@@ -130,14 +130,22 @@ class CitationBuilder:
 
         # Filter to only top-k highest-scoring chunks for citation
         # This prevents weakly-related chunks from being cited
-        # Step 1: Identify top-k by score
+        # Step 1: Identify top-k by score, filtering out weak outliers (<55% of top score)
         top_k_chunks_by_score = sorted(chunks, key=lambda c: c.score, reverse=True)[:top_k]
-        top_k_ids = {c.chunk.id for c in top_k_chunks_by_score}
-        
+        top_score = top_k_chunks_by_score[0].score if top_k_chunks_by_score else 0.0
+
+        top_k_ids = set()
+        for c in top_k_chunks_by_score:
+            # If top score is dominant (>= 0.02), filter out chunks scoring less than 55% of top score
+            if top_score >= 0.02 and c.score < top_score * 0.55:
+                continue
+            top_k_ids.add(c.chunk.id)
+
         # Step 2: Filter original list preserving input order
         top_chunks = [c for c in chunks if c.chunk.id in top_k_ids]
-        
+
         logger.debug("Building citations from %d chunk(s) (filtered to top %d)", len(chunks), len(top_chunks))
+
 
         # DIAGNOSTIC: Log top chunks being considered for citation
         logger.debug("CITATION BUILDER INPUT (top %d):", len(top_chunks))

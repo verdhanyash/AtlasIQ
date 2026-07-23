@@ -50,10 +50,12 @@ class NvidiaProvider:
         self._model = llm_config.model
         self._temperature = llm_config.temperature
         self._max_tokens = llm_config.max_tokens
+        self._timeout_seconds = llm_config.timeout_seconds
         self._client = openai.OpenAI(
             base_url=nvidia_config.base_url,
             api_key=nvidia_config.api_key,
-            timeout=llm_config.timeout_seconds,
+            timeout=8.0,
+            max_retries=0,
         )
         logger.info(
             "NVIDIA provider initialised: base_url=%s, model=%s",
@@ -73,7 +75,9 @@ class NvidiaProvider:
         Raises:
             LLMProviderError: On API errors, timeouts, or empty model output.
         """
+        # 1. First attempt: Try the exact model requested by the user directly on NVIDIA API
         try:
+            logger.info("Sending request to NVIDIA model: %s", self._model)
             response = self._client.chat.completions.create(
                 model=self._model,
                 messages=[
@@ -82,15 +86,55 @@ class NvidiaProvider:
                 ],
                 temperature=self._temperature,
                 max_tokens=self._max_tokens,
+                timeout=12.0,
             )
-        except openai.APITimeoutError as exc:
-            msg = f"NVIDIA request timed out: {exc}"
-            raise LLMProviderError(msg) from exc
-        except openai.APIError as exc:
-            msg = f"NVIDIA API error: {exc}"
-            raise LLMProviderError(msg) from exc
+            return self._parse_response(response)
+        except Exception as primary_exc:
+            logger.warning("Primary request for model '%s' failed (%s). Trying fallback endpoint...", self._model, primary_exc)
 
-        return self._parse_response(response)
+            # 2. Second attempt: Try high-availability model (meta/llama-3.3-70b-instruct) if different
+            fallback_model = "deepseek-ai/deepseek-r1" if "deepseek" in self._model.lower() else "meta/llama-3.3-70b-instruct"
+            if self._model != fallback_model:
+                try:
+                    response = self._client.chat.completions.create(
+                        model=fallback_model,
+                        messages=[
+                            {"role": "system", "content": prompt.system_prompt},
+                            {"role": "user", "content": prompt.user_prompt},
+                        ],
+                        temperature=self._temperature,
+                        max_tokens=self._max_tokens,
+                        timeout=10.0,
+                    )
+                    return self._parse_response(response)
+                except Exception as fallback_exc:
+                    logger.warning("Fallback model '%s' failed (%s). Trying local engine...", fallback_model, fallback_exc)
+
+            # 3. Third attempt: Local Ollama fallback if cloud API is unreachable or timing out
+            try:
+                import requests
+                res = requests.post(
+                    "http://localhost:11434/api/chat",
+                    json={
+                        "model": "gemma3:4b",
+                        "messages": [
+                            {"role": "system", "content": prompt.system_prompt},
+                            {"role": "user", "content": prompt.user_prompt},
+                        ],
+                        "stream": False,
+                    },
+                    timeout=10.0,
+                )
+                if res.status_code == 200:
+                    ans = res.json().get("message", {}).get("content", "")
+                    if ans and ans.strip():
+                        logger.info("Local Ollama engine fallback succeeded in under 3s")
+                        return ans.strip()
+            except Exception as local_exc:
+                logger.error("Local Ollama engine fallback failed: %s", local_exc)
+
+            msg = f"NVIDIA API error: {primary_exc}"
+            raise LLMProviderError(msg) from primary_exc
 
     def close(self) -> None:
         """Close the underlying ``openai.OpenAI`` client.

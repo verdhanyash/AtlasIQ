@@ -50,7 +50,7 @@ chunking:
 embedding:
   model_name: "nomic-ai/nomic-embed-text-v1.5"
   batch_size: 32
-  device: "cpu"
+  device: "cuda"  # RTX 3050 GPU acceleration
 
 # Retrieval
 retrieval:
@@ -60,17 +60,17 @@ retrieval:
   rerank_top_k: 5
   rrf_k: 60
   min_confidence_score: 0.01
-  hybrid_min_score: 0.025  # Increased to filter out weak irrelevant matches
+  hybrid_min_score: 0.015  # Balanced threshold - filters weak matches while keeping relevant results
 
 # Reranker
 reranker:
   model_name: "BAAI/bge-reranker-v2-m3"
-  device: "cpu"
+  device: "cuda"  # RTX 3050 GPU acceleration
 
 # LLM provider configuration
 llm:
   provider: "nvidia"
-  model: "deepseek-ai/deepseek-v4-pro"
+  model: "meta/llama-3.3-70b-instruct"
   temperature: 0.3
   max_tokens: 1024
   timeout_seconds: 60

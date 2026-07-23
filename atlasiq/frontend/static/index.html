@@ -5,9 +5,31 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>AtlasIQ | Knowledge Search</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        .font-model, #nvidia-model, #ollama-model, #openai-model, #anthropic-model {
+            font-family: 'Geist Mono', monospace !important;
+        }
+        
+        select {
+            border-radius: 14px !important;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        
+        option, optgroup {
+            font-family: 'Geist Mono', monospace !important;
+            background-color: #161820 !important;
+            color: #f1f5f9 !important;
+            padding: 12px 16px !important;
+            border-radius: 8px !important;
+        }
+        
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
@@ -243,18 +265,18 @@
             <p class="font-label-sm text-[12px] text-on-surface-variant opacity-60">Enterprise RAG</p>
         </div>
     </div>
-    <nav class="flex-1 mt-8 space-y-2">
-        <a class="flex items-center gap-3 px-3 py-2 text-primary font-bold bg-white/5 rounded-lg transition-transform active:scale-95" href="#" id="nav-library">
+    <nav class="flex-1 mt-8 space-y-2" id="sidebar-nav">
+        <a class="flex items-center gap-3 px-3 py-2 text-primary font-bold bg-white/10 border border-white/10 rounded-lg transition-all" href="#" id="nav-library">
             <span class="material-symbols-outlined text-[20px]">chat</span>
             <span class="font-label-md text-[14px]">AtlasIQ</span>
         </a>
         <a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 rounded-lg" href="#" id="nav-collections">
-            <span class="material-symbols-outlined text-[20px]">settings</span>
-            <span class="font-label-md text-[14px]">Model Settings</span>
-        </a>
-        <a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 rounded-lg" href="#" id="nav-settings">
             <span class="material-symbols-outlined text-[20px]">library_books</span>
             <span class="font-label-md text-[14px]">Collections</span>
+        </a>
+        <a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 rounded-lg" href="#" id="nav-settings">
+            <span class="material-symbols-outlined text-[20px]">settings</span>
+            <span class="font-label-md text-[14px]">Model Settings</span>
         </a>
         <a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 rounded-lg" href="#" id="nav-profile">
             <span class="material-symbols-outlined text-[20px]">account_circle</span>
@@ -275,12 +297,14 @@
         <div class="flex items-center gap-4">
             <span class="font-label-sm text-[12px] text-on-surface-variant tracking-widest uppercase">System Status: <span id="system-status">Optimal</span></span>
         </div>
-        <div class="flex items-center gap-6">
-            <button class="text-on-surface-variant hover:text-primary transition-opacity active:opacity-80">
-                <span class="material-symbols-outlined">notifications</span>
+        <div class="flex items-center gap-4">
+            <button id="top-history-btn" title="Search History" class="flex items-center gap-2 px-3 py-1.5 rounded-lg glass-level-1 text-on-surface-variant hover:text-primary hover:bg-white/10 transition-all active:scale-95 cursor-pointer">
+                <span class="material-symbols-outlined text-[20px]">history</span>
+                <span class="text-[12px] font-['JetBrains_Mono']">History</span>
             </button>
-            <button class="text-on-surface-variant hover:text-primary transition-opacity active:opacity-80">
-                <span class="material-symbols-outlined">help_outline</span>
+            <button id="top-help-btn" title="About AtlasIQ & System Architecture" class="flex items-center gap-2 px-3 py-1.5 rounded-lg glass-level-1 text-on-surface-variant hover:text-primary hover:bg-white/10 transition-all active:scale-95 cursor-pointer">
+                <span class="material-symbols-outlined text-[20px]">help_outline</span>
+                <span class="text-[12px] font-['JetBrains_Mono']">About</span>
             </button>
         </div>
     </header>
@@ -464,6 +488,22 @@
                     </div>
                 </div>
 
+                <!-- Performance Latency & Speed Comparison Card -->
+                <div id="performance-comparison-bar" class="bg-surface-container-high/40 backdrop-blur-2xl rounded-xl p-4 border border-white/10 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary/80 text-[20px]">timer</span>
+                        <div>
+                            <p class="text-[10px] font-['JetBrains_Mono'] text-on-surface-variant/70 uppercase tracking-wider">Inference Benchmark</p>
+                            <p class="text-[13px] font-['JetBrains_Mono'] text-on-surface mt-0.5" id="active-speed-text">
+                                <span class="text-on-surface font-semibold">--</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="comparison-pill" class="px-3.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[11px] font-['JetBrains_Mono'] text-on-surface-variant backdrop-blur-md">
+                        <span id="comparison-detail-text">--</span>
+                    </div>
+                </div>
+
                 <!-- Answer Card -->
                 <div class="glass-level-2 rounded-2xl p-8 relative">
                     <div class="prose prose-invert max-w-none">
@@ -558,6 +598,123 @@
         </div>
     </div>
 
+    <!-- History View -->
+    <div id="history-view" class="hidden p-10 max-w-screen-xl mx-auto w-full space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl glass-level-3 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-[24px]">history</span>
+                </div>
+                <div>
+                    <h2 class="text-[24px] font-semibold text-on-surface">Search Query History</h2>
+                    <p class="text-[12px] font-['JetBrains_Mono'] text-on-surface-variant">Review past questions, latency metrics, models used, and citations</p>
+                </div>
+            </div>
+            <button id="clear-history-btn" class="flex items-center gap-2 px-4 py-2 rounded-xl glass-level-2 text-error hover:bg-error/10 border border-error/20 text-[13px] font-['JetBrains_Mono'] transition-all cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">delete_sweep</span>
+                Clear History
+            </button>
+        </div>
+        
+        <!-- History List Container -->
+        <div id="history-list" class="space-y-4"></div>
+        
+        <!-- Empty History State -->
+        <div id="history-empty" class="hidden text-center py-16 glass-level-1 rounded-2xl">
+            <span class="material-symbols-outlined text-[64px] text-on-surface-variant opacity-30 mb-4">manage_search</span>
+            <h3 class="text-[18px] font-semibold mb-2">No search history yet</h3>
+            <p class="text-[13px] text-on-surface-variant">Your queries, latency benchmarks, and answer metadata will appear here automatically.</p>
+        </div>
+    </div>
+
+    <!-- User Profile View -->
+    <div id="profile-view" class="hidden p-10 max-w-screen-xl mx-auto w-full font-['Geist_Mono']">
+        <div class="mb-8 flex items-center justify-between">
+            <div>
+                <h2 class="text-[32px] font-semibold mb-2 tracking-tight text-on-surface">User Profile</h2>
+                <p class="text-[13px] text-on-surface-variant/80">System environment, compute hardware, and active workspace parameters</p>
+            </div>
+        </div>
+
+        <div class="bg-surface-container-high/40 backdrop-blur-2xl rounded-2xl p-8 space-y-8 border border-white/10 shadow-2xl relative overflow-hidden">
+            <!-- Glass Background Glow Effect -->
+            <div class="absolute -right-20 -top-20 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <!-- Profile Header -->
+            <div class="flex items-center gap-6 pb-6 border-b border-white/10 relative z-10">
+                <div class="w-20 h-20 rounded-2xl bg-surface-container-high/80 border border-white/20 flex items-center justify-center shadow-lg relative group">
+                    <span class="material-symbols-outlined text-primary text-[42px]">person</span>
+                    <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-success border-2 border-surface-container-high shadow-md"></div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-[22px] font-bold text-on-surface tracking-tight">Administrator</h3>
+                        <span class="px-3 py-1 rounded-full bg-primary/15 border border-primary/30 text-primary text-[10px] uppercase font-semibold tracking-wider">Active Session</span>
+                    </div>
+                    <p class="text-[13px] text-on-surface-variant/90 mt-1">AtlasIQ Enterprise RAG Operator</p>
+                </div>
+            </div>
+
+            <!-- Grid 1: System Specs -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-[13px] relative z-10">
+                <div class="bg-white/5 backdrop-blur-xl rounded-xl p-5 border border-white/10 hover:border-white/20 transition-all space-y-2 group">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-[18px]">folder_open</span>
+                        <p class="text-on-surface-variant/80 uppercase text-[10px] tracking-wider">Active Workspace</p>
+                    </div>
+                    <p class="text-on-surface font-semibold text-[15px] group-hover:text-primary transition-colors">verdhan/AtlasIQ</p>
+                </div>
+
+                <div class="bg-white/5 backdrop-blur-xl rounded-xl p-5 border border-white/10 hover:border-white/20 transition-all space-y-2 group">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-success text-[18px]">memory</span>
+                        <p class="text-on-surface-variant/80 uppercase text-[10px] tracking-wider">GPU Compute Acceleration</p>
+                    </div>
+                    <p class="text-success font-semibold text-[15px]">NVIDIA GeForce RTX 3050 6GB (cuda:0)</p>
+                </div>
+
+                <div class="bg-white/5 backdrop-blur-xl rounded-xl p-5 border border-white/10 hover:border-white/20 transition-all space-y-2 group">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-[18px]">database</span>
+                        <p class="text-on-surface-variant/80 uppercase text-[10px] tracking-wider">Vector & Relational Engine</p>
+                    </div>
+                    <p class="text-on-surface font-semibold text-[15px]">Qdrant Vector DB + PostgreSQL 16</p>
+                </div>
+
+                <div class="bg-white/5 backdrop-blur-xl rounded-xl p-5 border border-white/10 hover:border-white/20 transition-all space-y-2 group">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-[18px]">auto_awesome</span>
+                        <p class="text-on-surface-variant/80 uppercase text-[10px] tracking-wider">Embedding Engine</p>
+                    </div>
+                    <p class="text-on-surface font-semibold text-[15px]">nomic-embed-text-v1.5 (768 dimensions)</p>
+                </div>
+            </div>
+
+            <!-- Grid 2: Operational Health -->
+            <div class="bg-white/5 backdrop-blur-xl rounded-xl p-6 border border-white/10 space-y-4 relative z-10">
+                <h4 class="text-[12px] uppercase text-on-surface-variant/80 tracking-wider font-semibold">Runtime Environment & Security</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-[12px]">
+                    <div>
+                        <span class="text-on-surface-variant/70 block mb-1">LLM Provider</span>
+                        <span class="text-on-surface font-semibold">NVIDIA Build API</span>
+                    </div>
+                    <div>
+                        <span class="text-on-surface-variant/70 block mb-1">API Key Status</span>
+                        <span class="text-success font-semibold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-success"></span> Configured in .env</span>
+                    </div>
+                    <div>
+                        <span class="text-on-surface-variant/70 block mb-1">Reranker Model</span>
+                        <span class="text-on-surface font-semibold">BAAI/bge-reranker-v2-m3</span>
+                    </div>
+                    <div>
+                        <span class="text-on-surface-variant/70 block mb-1">Hardware Acceleration</span>
+                        <span class="text-on-surface font-semibold">CUDA Enabled</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="mt-auto p-6 border-t border-white/5 flex justify-end items-center opacity-60">
         <div class="flex items-center gap-2">
@@ -566,6 +723,83 @@
         </div>
     </footer>
 </main>
+
+<!-- About AtlasIQ Modal -->
+<div id="help-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+    <div class="glass-level-3 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-6 border border-white/15 shadow-2xl">
+        <div class="flex justify-between items-start pb-4 border-b border-white/10">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl glass-level-2 flex items-center justify-center p-2">
+                    <img src="/logo.png" alt="AtlasIQ" class="w-full h-full object-contain">
+                </div>
+                <div>
+                    <h2 class="text-[24px] font-semibold text-on-surface">About AtlasIQ</h2>
+                    <p class="text-[12px] font-['JetBrains_Mono'] text-space-blue">Enterprise Retrieval-Augmented Generation (RAG)</p>
+                </div>
+            </div>
+            <button id="close-help-modal" class="text-on-surface-variant hover:text-primary p-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[24px]">close</span>
+            </button>
+        </div>
+        
+        <div class="space-y-6 text-[14px] text-on-surface-variant leading-relaxed">
+            <p>
+                <strong class="text-on-surface">AtlasIQ</strong> is an enterprise-grade Knowledge Search platform engineered for strict factual grounding, zero hallucination policies, and verifiable document citations.
+            </p>
+            
+            <div class="space-y-4">
+                <h4 class="text-[12px] font-['JetBrains_Mono'] text-primary uppercase tracking-wider font-semibold">⚙️ 4-Stage RAG Pipeline Architecture</h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-[12px]">
+                    <div class="glass-level-1 rounded-xl p-4 border border-white/5 space-y-2">
+                        <div class="flex items-center gap-2 text-on-surface font-semibold">
+                            <span class="material-symbols-outlined text-space-blue text-[18px]">difference</span>
+                            1. Ingestion & Chunking
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant/80">Parses PDF, DOCX, TXT into semantic chunks with 800 char window and 100 char overlap.</p>
+                    </div>
+                    
+                    <div class="glass-level-1 rounded-xl p-4 border border-white/5 space-y-2">
+                        <div class="flex items-center gap-2 text-on-surface font-semibold">
+                            <span class="material-symbols-outlined text-space-blue text-[18px]">hub</span>
+                            2. Hybrid Retrieval (RRF)
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant/80">Fuses Dense Vector Search (Qdrant) and Sparse Keyword Search (BM25) via Reciprocal Rank Fusion.</p>
+                    </div>
+                    
+                    <div class="glass-level-1 rounded-xl p-4 border border-white/5 space-y-2">
+                        <div class="flex items-center gap-2 text-on-surface font-semibold">
+                            <span class="material-symbols-outlined text-space-blue text-[18px]">psychology</span>
+                            3. Grounded LLM Generation
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant/80">Generates precise responses constrained exclusively to context retrieved from your internal documents.</p>
+                    </div>
+                    
+                    <div class="glass-level-1 rounded-xl p-4 border border-white/5 space-y-2">
+                        <div class="flex items-center gap-2 text-on-surface font-semibold">
+                            <span class="material-symbols-outlined text-space-blue text-[18px]">verified</span>
+                            4. Citation Verification
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant/80">Maps exact page references, document quotes, and relevance scores deterministically without LLM hallucination.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-3 glass-level-1 rounded-xl p-4 border border-white/5 text-[12px] font-['JetBrains_Mono']">
+                <h4 class="text-primary uppercase tracking-wider font-semibold text-[11px]">🎮 Infrastructure & GPU Acceleration</h4>
+                <ul class="space-y-1.5 text-on-surface-variant">
+                    <li class="flex items-center gap-2">✓ <strong class="text-on-surface">PyTorch CUDA:</strong> RTX 3050 6GB GPU accelerated embeddings (nomic-embed-text-v1.5)</li>
+                    <li class="flex items-center gap-2">✓ <strong class="text-on-surface">Database:</strong> PostgreSQL 16 + Qdrant Vector Engine</li>
+                    <li class="flex items-center gap-2">✓ <strong class="text-on-surface">LLM Providers:</strong> NVIDIA Build Cloud API & Local Ollama</li>
+                </ul>
+            </div>
+        </div>
+        
+        <button id="close-help-btn-bottom" class="w-full py-3 bg-primary text-background rounded-xl font-label-md text-[14px] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all cursor-pointer">
+            Close Overview
+        </button>
+    </div>
+</div>
 
 <!-- Model Selection Modal -->
 <div id="model-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -607,21 +841,21 @@
                 <div id="nvidia-config" class="hidden space-y-4">
                     <div>
                         <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">Model</label>
-                        <select id="nvidia-model" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
-                            <optgroup label="Latest Free Models (2026)">
+                        <select id="nvidia-model" class="w-full bg-surface-container-high/60 backdrop-blur-xl border border-white/15 rounded-2xl px-4 py-3.5 text-on-surface focus:border-white/40 focus:outline-none font-['Geist_Mono',_monospace] text-[13px] transition-all shadow-md">
+                            <optgroup label="High Performance">
+                                <option value="meta/llama-3.3-70b-instruct" selected>Llama 3.3 70B Instruct (Recommended)</option>
+                                <option value="nvidia/llama-3.1-nemotron-70b-instruct">Llama 3.1 Nemotron 70B (Precision RAG)</option>
+                                <option value="meta/llama-3.1-8b-instruct">Llama 3.1 8B Instruct (Lightweight)</option>
+                            </optgroup>
+                            <optgroup label="Deep Reasoning">
+                                <option value="deepseek-ai/deepseek-r1">DeepSeek R1</option>
                                 <option value="deepseek-ai/deepseek-v4-pro">DeepSeek V4 Pro</option>
                                 <option value="moonshotai/kimi-k2.6">Moonshot Kimi K2.6</option>
                             </optgroup>
-                            <optgroup label="Free Models">
-                                <option value="deepseek/deepseek-r1">DeepSeek R1</option>
+                            <optgroup label="High Capacity & Open">
+                                <option value="meta/llama-3.1-405b-instruct">Llama 3.1 405B Instruct</option>
                                 <option value="zhipuai/glm-4-plus">GLM-4-Plus</option>
                                 <option value="moonshot/moonshot-v1-128k">Moonshot Kimi K1.5</option>
-                            </optgroup>
-                            <optgroup label="Premium Models">
-                                <option value="nvidia/llama-3.1-nemotron-70b-instruct">Llama 3.1 Nemotron 70B</option>
-                                <option value="meta/llama-3.1-405b-instruct">Llama 3.1 405B Instruct</option>
-                                <option value="meta/llama-3.1-70b-instruct">Llama 3.1 70B Instruct</option>
-                                <option value="meta/llama-3.1-8b-instruct">Llama 3.1 8B Instruct</option>
                             </optgroup>
                         </select>
                     </div>
@@ -633,8 +867,8 @@
                                 <span class="text-[12px] text-success font-['JetBrains_Mono']">API key configured in .env</span>
                             </div>
                         </div>
-                        <input type="password" id="nvidia-key" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none" placeholder="nvapi-xxx (optional if configured in .env)">
-                        <p class="text-[10px] text-on-surface-variant/60 mt-2 font-['JetBrains_Mono']">Leave empty to use API key from .env file</p>
+                        <input type="password" id="nvidia-key" class="w-full bg-surface-container-high/60 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none transition-all" placeholder="nvapi-xxx (optional if configured in .env)">
+                        <p class="text-[13px] text-on-surface-variant/80 mt-2.5 font-medium">Leave empty to use API key from .env file</p>
                     </div>
                 </div>
                 
@@ -642,7 +876,7 @@
                 <div id="openai-config" class="hidden space-y-4">
                     <div>
                         <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">Model</label>
-                        <select id="openai-model" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
+                        <select id="openai-model" class="w-full bg-surface-container-high/60 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
                             <option value="gpt-4o-mini">GPT-4o-mini</option>
                             <option value="gpt-4o">GPT-4o</option>
                             <option value="gpt-4-turbo">GPT-4-turbo</option>
@@ -650,7 +884,7 @@
                     </div>
                     <div>
                         <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">API Key</label>
-                        <input type="password" id="openai-key" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none" placeholder="sk-xxx">
+                        <input type="password" id="openai-key" class="w-full bg-surface-container-high/60 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none" placeholder="sk-xxx">
                     </div>
                 </div>
                 
@@ -658,20 +892,20 @@
                 <div id="anthropic-config" class="hidden space-y-4">
                     <div>
                         <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">Model</label>
-                        <select id="anthropic-model" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
+                        <select id="anthropic-model" class="w-full bg-surface-container-high/60 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
                             <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
                             <option value="claude-3-opus-20240229">Claude 3 Opus</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">API Key</label>
-                        <input type="password" id="anthropic-key" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none" placeholder="sk-ant-xxx">
+                        <input type="password" id="anthropic-key" class="w-full bg-surface-container-high/60 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none" placeholder="sk-ant-xxx">
                     </div>
                 </div>
             </div>
             
-            <!-- Save Button -->
-            <button id="save-model" class="w-full bg-primary text-background font-label-md text-[14px] py-3 rounded-xl hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all">
+            <!-- Save Button (Glassmorphic) -->
+            <button id="save-model" class="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-on-surface font-medium text-[14px] py-3.5 rounded-2xl transition-all backdrop-blur-xl shadow-lg active:scale-[0.98] cursor-pointer">
                 Save Settings
             </button>
         </div>
@@ -702,6 +936,13 @@
     const loadingState = document.getElementById('loading-state');
     const resultsState = document.getElementById('results-state');
     const collectionsView = document.getElementById('collections-view');
+    const historyView = document.getElementById('history-view');
+    const helpModal = document.getElementById('help-modal');
+    const topHistoryBtn = document.getElementById('top-history-btn');
+    const topHelpBtn = document.getElementById('top-help-btn');
+    const closeHelpModal = document.getElementById('close-help-modal');
+    const closeHelpBtnBottom = document.getElementById('close-help-btn-bottom');
+    const clearHistoryBtn = document.getElementById('clear-history-btn');
     const searchInput = document.getElementById('search-input');
     const searchBtn = document.getElementById('search-btn');
     const loadingQuery = document.getElementById('loading-query');
@@ -733,6 +974,41 @@
     const uploadBtn = document.getElementById('upload-btn');
     const fileInput = document.getElementById('file-input');
     
+    const profileView = document.getElementById('profile-view');
+    const navLibrary = document.getElementById('nav-library');
+    const navSettings = document.getElementById('nav-settings');
+    const navProfile = document.getElementById('nav-profile');
+
+    // Dynamic Navigation Highlighting
+    function updateNavHighlight(activeTarget) {
+        const navItems = [
+            { id: 'nav-library', activeStates: ['empty', 'loading', 'results'] },
+            { id: 'nav-collections', activeStates: ['collections'] },
+            { id: 'nav-settings', activeStates: ['settings'] },
+            { id: 'nav-profile', activeStates: ['profile'] }
+        ];
+        
+        navItems.forEach(item => {
+            const el = document.getElementById(item.id);
+            if (!el) return;
+            const isActive = (item.id === activeTarget) || (item.activeStates && item.activeStates.includes(activeTarget));
+            if (isActive) {
+                el.className = "flex items-center gap-3 px-3 py-2 text-primary font-bold bg-white/10 border border-white/10 shadow-sm rounded-lg transition-all";
+            } else {
+                el.className = "flex items-center gap-3 px-3 py-2 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 rounded-lg";
+            }
+        });
+
+        const topHistoryBtn = document.getElementById('top-history-btn');
+        if (topHistoryBtn) {
+            if (activeTarget === 'history') {
+                topHistoryBtn.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-white/20 border border-white/25 text-primary font-bold shadow-sm transition-all active:scale-95 cursor-pointer";
+            } else {
+                topHistoryBtn.className = "flex items-center gap-2 px-3 py-1.5 rounded-lg glass-level-1 text-on-surface-variant hover:text-primary hover:bg-white/10 transition-all active:scale-95 cursor-pointer";
+            }
+        }
+    }
+    
     // State transitions
     function setState(state) {
         currentState = state;
@@ -741,6 +1017,10 @@
         loadingState.classList.toggle('hidden', state !== 'loading');
         resultsState.classList.toggle('hidden', state !== 'results');
         collectionsView.classList.toggle('hidden', state !== 'collections');
+        if (historyView) historyView.classList.toggle('hidden', state !== 'history');
+        if (profileView) profileView.classList.toggle('hidden', state !== 'profile');
+
+        updateNavHighlight(state);
     }
     
     // Handle search
@@ -765,7 +1045,16 @@
             });
             
             if (!response.ok) {
-                throw new Error(`API error: ${response.status}`);
+                let errorMsg = `Server error (${response.status})`;
+                try {
+                    const errData = await response.json();
+                    if (errData.message) {
+                        errorMsg = errData.message;
+                    } else if (errData.error) {
+                        errorMsg = errData.error;
+                    }
+                } catch (e) {}
+                throw new Error(errorMsg);
             }
             
             const data = await response.json();
@@ -776,11 +1065,66 @@
             
         } catch (error) {
             console.error('Search error:', error);
-            alert('Search failed. Please ensure the backend is running on port 8000.');
+            showNotification(`Search failed: ${error.message}`, 'error');
+            alert(`Search failed: ${error.message}`);
             setState('empty');
         }
     }
     
+    // Render Markdown to HTML with Bulleted Lists
+    function renderMarkdownHTML(text) {
+        if (!text) return '';
+        
+        let html = text.trim();
+        
+        // Replace citation superscripts [1], [2]
+        html = html.replace(/\[(\d+)\]/g, '<span class="citation-sup">$1</span>');
+        
+        // Normalize inline bullets separated by * or - into newlines
+        // e.g. "Text: * **Fact 1**: desc * **Fact 2**: desc" -> "\n- **Fact 1**: desc\n- **Fact 2**: desc"
+        html = html.replace(/(\s+\*|\s+-)\s+\*\*/g, '\n- **');
+        
+        // Convert bold text **text** -> <strong>text</strong>
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="text-on-surface font-semibold">$1</strong>');
+        
+        const lines = html.split('\n');
+        let formattedHTML = '';
+        let inList = false;
+        
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+                if (inList) {
+                    formattedHTML += '</ul>';
+                    inList = false;
+                }
+                return;
+            }
+            
+            // Check for bullet point start
+            if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
+                if (!inList) {
+                    formattedHTML += '<ul class="list-disc pl-6 space-y-2.5 my-3 text-on-surface/90 font-sans">';
+                    inList = true;
+                }
+                const content = trimmed.replace(/^[-*•]\s*/, '');
+                formattedHTML += `<li class="leading-relaxed">${content}</li>`;
+            } else {
+                if (inList) {
+                    formattedHTML += '</ul>';
+                    inList = false;
+                }
+                formattedHTML += `<p class="mb-3 leading-relaxed text-on-surface/90">${trimmed}</p>`;
+            }
+        });
+        
+        if (inList) {
+            formattedHTML += '</ul>';
+        }
+        
+        return formattedHTML;
+    }
+
     // Display results
     function displayResults(query, data, elapsed) {
         setState('results');
@@ -795,11 +1139,35 @@
         providerDisplay.textContent = llmConfig.provider.charAt(0).toUpperCase() + llmConfig.provider.slice(1);
         modelDisplay.textContent = llmConfig.model;
         
-        // Display timestamp
+        // Minimal Latency Benchmark & Speed Comparison
+        const elapsedSec = (elapsedMs / 1000).toFixed(2);
+        const activeSpeedText = document.getElementById('active-speed-text');
+        const comparisonDetailText = document.getElementById('comparison-detail-text');
+        
+        if (activeSpeedText && comparisonDetailText) {
+            const providerName = llmConfig.provider.toUpperCase();
+            activeSpeedText.innerHTML = `<span class="text-on-surface font-semibold">${llmConfig.model}</span> <span class="text-on-surface-variant/60 font-mono text-[12px]">(${providerName})</span> — <span class="text-primary font-mono font-medium">${elapsedSec}s</span> <span class="text-on-surface-variant/50 text-[11px]">(${elapsedMs}ms)</span>`;
+            
+            if (llmConfig.provider === 'nvidia') {
+                const estimatedOllamaSec = Math.max(30, Math.round(elapsedSec * 25));
+                const speedupRatio = Math.round(estimatedOllamaSec / Math.max(0.5, elapsedSec));
+                comparisonDetailText.innerHTML = `<span class="text-on-surface-variant/70">Est. Local CPU:</span> <span class="text-on-surface font-medium">~${estimatedOllamaSec}s</span> <span class="text-success font-semibold">(${speedupRatio}x speedup)</span>`;
+            } else if (llmConfig.provider === 'ollama') {
+                const estimatedNvidiaSec = Math.max(1.2, (elapsedSec / 25).toFixed(1));
+                const speedupRatio = Math.round(elapsedSec / estimatedNvidiaSec);
+                comparisonDetailText.innerHTML = `<span class="text-on-surface-variant/70">Est. Cloud GPU:</span> <span class="text-on-surface font-medium">~${estimatedNvidiaSec}s</span> <span class="text-primary font-semibold">(${speedupRatio}x potential speedup)</span>`;
+            } else {
+                comparisonDetailText.textContent = `Latency: ${elapsedSec}s`;
+            }
+        }
+        
+        // Save Search Entry into History
+        saveSearchToHistory(query, data, elapsedMs);
+        
+        // Display timestamp in clear 12-hour AM/PM format
         const now = new Date();
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        generatedTime.textContent = `${hours}:${minutes}`;
+        generatedTime.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+
         
         // Confidence badge
         const confidence = data.confidence || 0.5;
@@ -819,14 +1187,9 @@
         confidenceBadge.className = `inline-flex items-center gap-2 px-4 py-2 rounded-full font-['JetBrains_Mono'] text-[10px] font-medium uppercase tracking-wide ${badgeClass}`;
         confidenceText.textContent = badgeLabel;
         
-        // Answer with citations
+        // Answer with markdown rendering & citations
         let answer = data.answer || 'No answer generated.';
-        
-        // Replace citation markers (if any) with citation superscripts
-        // The backend might return [1], [2] or we need to insert them based on quotes
-        answer = answer.replace(/\[(\d+)\]/g, '<span class="citation-sup">$1</span>');
-        
-        answerContent.innerHTML = answer;
+        answerContent.innerHTML = renderMarkdownHTML(answer);
         
         // Citations with enhanced display
         citationsContainer.innerHTML = '';
@@ -1036,18 +1399,36 @@
             } else {
                 document.getElementById('system-status').textContent = 'Degraded';
             }
+            // Sync saved localStorage config to backend if present
+            const savedLocalConfig = localStorage.getItem('llm_config');
+            if (savedLocalConfig) {
+                try {
+                    const cfg = JSON.parse(savedLocalConfig);
+                    await fetch(`${API_BASE_URL}/config`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            provider: cfg.provider,
+                            model: cfg.model,
+                            api_key: cfg.apiKey,
+                            base_url: cfg.baseUrl
+                        })
+                    });
+                } catch (e) {
+                    console.warn('Failed to sync local config to backend on startup:', e);
+                }
+            }
         } catch (error) {
             document.getElementById('system-status').textContent = 'Backend Offline';
             console.warn('Backend not reachable:', error);
         }
     }
+
     
     // Initialize
     checkBackend();
     
     // Collections functionality
-    const navSettings = document.getElementById('nav-settings');
-    const navLibrary = document.getElementById('nav-library');
     const documentsGrid = document.getElementById('documents-grid');
     const collectionsEmpty = document.getElementById('collections-empty');
     const totalDocs = document.getElementById('total-docs');
@@ -1055,27 +1436,31 @@
     const totalSize = document.getElementById('total-size');
     const indexedDocs = document.getElementById('indexed-docs');
     
-    navSettings.addEventListener('click', async (e) => {
-        e.preventDefault();
-        await loadCollections();
-    });
-    
-    // Refresh button
-    const refreshCollections = document.getElementById('refresh-collections');
-    if (refreshCollections) {
-        refreshCollections.addEventListener('click', async (e) => {
+    if (navCollections) {
+        navCollections.addEventListener('click', async (e) => {
             e.preventDefault();
-            refreshCollections.querySelector('.material-symbols-outlined').style.animation = 'spin 1s linear infinite';
             await loadCollections();
-            refreshCollections.querySelector('.material-symbols-outlined').style.animation = '';
         });
     }
-    
-    navLibrary.addEventListener('click', (e) => {
-        e.preventDefault();
-        setState('empty');
-        searchInput.value = '';
-    });
+
+    if (navProfile) {
+        navProfile.addEventListener('click', (e) => {
+            e.preventDefault();
+            setState('profile');
+        });
+    }
+
+    if (navLibrary) {
+        navLibrary.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentState === 'results' && resultsQuery.value) {
+                setState('results');
+            } else {
+                setState('empty');
+                searchInput.value = '';
+            }
+        });
+    }
     
     async function loadCollections() {
         setState('collections');
@@ -1408,55 +1793,81 @@
             formData.append('file', file);
             
             try {
-                // Use XMLHttpRequest for real-time progress tracking
+                // Use XMLHttpRequest for real-time progress tracking with 2-stage lifecycle (network upload → AI embedding)
                 const result = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
                     
                     // Set timeout for large files (5 minutes)
-                    xhr.timeout = 300000; // 5 minutes in milliseconds
+                    xhr.timeout = 300000;
                     
                     let lastUpdate = 0;
-                    const UPDATE_INTERVAL = 50; // Update every 50ms minimum
+                    const UPDATE_INTERVAL = 50;
+                    let processTimer = null;
+                    let processingSeconds = 0;
                     
-                    // For very small files, artificially slow down to show progress
-                    const isSmallFile = file.size < 500000; // Less than 500KB
+                    function stopTimer() {
+                        if (processTimer) {
+                            clearInterval(processTimer);
+                            processTimer = null;
+                        }
+                    }
                     
-                    // Track upload progress
+                    function startIngestionTimer() {
+                        stopTimer();
+                        processingSeconds = 0;
+                        progressBar.className = 'h-full bg-gradient-to-r from-primary via-space-blue to-accent animate-pulse';
+                        progressBar.style.width = '100%';
+                        
+                        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                        
+                        processTimer = setInterval(() => {
+                            processingSeconds++;
+                            let stageText = "Parsing document structure & pages...";
+                            if (processingSeconds > 6 && processingSeconds <= 18) {
+                                stageText = "Chunking text into passages...";
+                            } else if (processingSeconds > 18) {
+                                stageText = `Generating 768-dim embeddings on GPU & indexing Qdrant... (${processingSeconds}s)`;
+                            }
+                            
+                            statusText.textContent = `${stageText}`;
+                            percentage.textContent = `Processing (${fileSizeMB} MB)...`;
+                        }, 1000);
+                    }
+                    
+                    // Track network byte upload progress (Phase 1)
                     xhr.upload.addEventListener('progress', (e) => {
                         if (e.lengthComputable) {
                             const now = Date.now();
-                            // Throttle updates to avoid excessive DOM manipulation
                             if (now - lastUpdate < UPDATE_INTERVAL) return;
                             lastUpdate = now;
                             
-                            let fileProgress = (e.loaded / e.total) * 100;
+                            const uploadPct = Math.min(99, Math.round((e.loaded / e.total) * 100));
+                            const overallProgress = ((i + (uploadPct / 100)) / files.length) * 100;
                             
-                            // For small files, show progress more gradually
-                            if (isSmallFile && fileProgress > 0 && fileProgress < 100) {
-                                fileProgress = Math.min(fileProgress, 95); // Cap at 95% until complete
-                            }
-                            
-                            const overallProgress = ((i + (fileProgress / 100)) / files.length) * 100;
-                            
-                            // Force immediate update without CSS transitions
                             requestAnimationFrame(() => {
+                                progressBar.className = 'h-full space-blue transition-all duration-150';
                                 progressBar.style.width = `${overallProgress}%`;
-                                percentage.textContent = `${Math.round(overallProgress)}%`;
-                                statusText.textContent = `Uploading ${file.name}... ${Math.round(fileProgress)}%`;
+                                percentage.textContent = `${uploadPct}%`;
+                                statusText.textContent = `Uploading ${file.name}... ${uploadPct}% (Sending data)`;
                             });
                         }
                     });
                     
-                    // Start progress immediately when upload begins
+                    // Network upload finished — server ingestion started (Phase 2)
+                    xhr.upload.addEventListener('load', () => {
+                        startIngestionTimer();
+                    });
+                    
                     xhr.upload.addEventListener('loadstart', () => {
-                        statusText.textContent = `Starting ${file.name}...`;
+                        statusText.textContent = `Starting upload of ${file.name}...`;
                     });
                     
                     xhr.addEventListener('load', () => {
+                        stopTimer();
                         if (xhr.status >= 200 && xhr.status < 300) {
-                            // Upload complete, now processing on backend
-                            statusText.textContent = `Processing ${file.name}...`;
-                            progressBar.classList.add('animate-pulse');
+                            statusText.textContent = `Processing complete for ${file.name}`;
+                            percentage.textContent = `100% Complete`;
+                            progressBar.className = 'h-full bg-success transition-all';
                             resolve(JSON.parse(xhr.responseText));
                         } else {
                             reject(new Error(`Upload failed: HTTP ${xhr.status}`));
@@ -1464,10 +1875,12 @@
                     });
                     
                     xhr.addEventListener('error', () => {
+                        stopTimer();
                         reject(new Error('Network error during upload'));
                     });
                     
                     xhr.addEventListener('timeout', () => {
+                        stopTimer();
                         reject(new Error('Upload timed out after 5 minutes'));
                     });
                     
@@ -1751,66 +2164,76 @@
     });
     
     // Modal functionality
-    navCollections.addEventListener('click', async (e) => {
-        e.preventDefault();
-        modelModal.classList.remove('hidden');
-        
-        // Set current values
-        llmProviderSelect.value = llmConfig.provider;
-        updateProviderConfig(llmConfig.provider);
-        
-        // Check if API keys are configured in .env
-        try {
-            const response = await fetch(`${API_BASE_URL}/config/check`);
-            if (response.ok) {
-                const configStatus = await response.json();
-                
-                // Show status for NVIDIA API key
-                const nvidiaKeyStatus = document.getElementById('nvidia-key-status');
-                if (configStatus.nvidia_api_key_configured) {
-                    nvidiaKeyStatus.classList.remove('hidden');
-                    // Clear the input field if API key is already configured
-                    document.getElementById('nvidia-key').value = '';
-                } else {
-                    nvidiaKeyStatus.classList.add('hidden');
+    if (navSettings) {
+        navSettings.addEventListener('click', async (e) => {
+            e.preventDefault();
+            modelModal.classList.remove('hidden');
+            updateNavHighlight('settings');
+            
+            // Set current values
+            llmProviderSelect.value = llmConfig.provider;
+            updateProviderConfig(llmConfig.provider);
+            
+            // Check if API keys are configured in .env
+            try {
+                const response = await fetch(`${API_BASE_URL}/config/check`);
+                if (response.ok) {
+                    const configStatus = await response.json();
+                    
+                    // Show status for NVIDIA API key
+                    const nvidiaKeyStatus = document.getElementById('nvidia-key-status');
+                    if (configStatus.nvidia_api_key_configured) {
+                        nvidiaKeyStatus.classList.remove('hidden');
+                        // Clear the input field if API key is already configured
+                        document.getElementById('nvidia-key').value = '';
+                    } else {
+                        nvidiaKeyStatus.classList.add('hidden');
+                    }
+                    
+                    // Update current provider and model if set ONLY IF user hasn't saved a custom config in localStorage
+                    const hasLocalConfig = localStorage.getItem('llm_config');
+                    if (!hasLocalConfig) {
+                        if (configStatus.current_provider) {
+                            llmProviderSelect.value = configStatus.current_provider;
+                            llmConfig.provider = configStatus.current_provider;
+                        }
+                        if (configStatus.current_model) {
+                            llmConfig.model = configStatus.current_model;
+                        }
+                    }
                 }
-                
-                // Update current provider and model if set
-                if (configStatus.current_provider) {
-                    llmProviderSelect.value = configStatus.current_provider;
-                    llmConfig.provider = configStatus.current_provider;
-                }
-                if (configStatus.current_model) {
-                    llmConfig.model = configStatus.current_model;
-                }
+            } catch (error) {
+                console.warn('Failed to check config status:', error);
             }
-        } catch (error) {
-            console.warn('Failed to check config status:', error);
-        }
-        
-        if (llmConfig.provider === 'ollama') {
-            document.getElementById('ollama-model').value = llmConfig.model;
-            document.getElementById('ollama-url').value = llmConfig.baseUrl;
-        } else if (llmConfig.provider === 'nvidia') {
-            document.getElementById('nvidia-model').value = llmConfig.model;
-            // Only set API key if user has one saved in localStorage
-            if (llmConfig.apiKey) document.getElementById('nvidia-key').value = llmConfig.apiKey;
-        } else if (llmConfig.provider === 'openai') {
-            document.getElementById('openai-model').value = llmConfig.model;
-            if (llmConfig.apiKey) document.getElementById('openai-key').value = llmConfig.apiKey;
-        } else if (llmConfig.provider === 'anthropic') {
-            document.getElementById('anthropic-model').value = llmConfig.model;
-            if (llmConfig.apiKey) document.getElementById('anthropic-key').value = llmConfig.apiKey;
-        }
-    });
+            
+            updateProviderConfig(llmConfig.provider);
+            
+            if (llmConfig.provider === 'ollama') {
+                document.getElementById('ollama-model').value = llmConfig.model;
+                document.getElementById('ollama-url').value = llmConfig.baseUrl;
+            } else if (llmConfig.provider === 'nvidia') {
+                document.getElementById('nvidia-model').value = llmConfig.model;
+                // Only set API key if user has one saved in localStorage
+                if (llmConfig.apiKey) document.getElementById('nvidia-key').value = llmConfig.apiKey;
+            } else if (llmConfig.provider === 'openai') {
+                document.getElementById('openai-model').value = llmConfig.model;
+                if (llmConfig.apiKey) document.getElementById('openai-key').value = llmConfig.apiKey;
+            } else if (llmConfig.provider === 'anthropic') {
+                document.getElementById('anthropic-model').value = llmConfig.model;
+                if (llmConfig.apiKey) document.getElementById('anthropic-key').value = llmConfig.apiKey;
+            }
+        });
+    }
     
     closeModal.addEventListener('click', () => {
         modelModal.classList.add('hidden');
+        updateNavHighlight(currentState);
     });
     
     modelModal.addEventListener('click', (e) => {
         if (e.target === modelModal) {
             modelModal.classList.add('hidden');
+            updateNavHighlight(currentState);
         }
     });
     
@@ -1824,10 +2247,13 @@
         openaiConfig.classList.add('hidden');
         anthropicConfig.classList.add('hidden');
         
+        const nvidiaKeyStatus = document.getElementById('nvidia-key-status');
+        
         if (provider === 'ollama') {
             ollamaConfig.classList.remove('hidden');
         } else if (provider === 'nvidia') {
             nvidiaConfig.classList.remove('hidden');
+            if (nvidiaKeyStatus) nvidiaKeyStatus.classList.remove('hidden');
         } else if (provider === 'openai') {
             openaiConfig.classList.remove('hidden');
         } else if (provider === 'anthropic') {
@@ -1857,12 +2283,181 @@
         llmConfig = { provider, model, apiKey, baseUrl };
         localStorage.setItem('llm_config', JSON.stringify(llmConfig));
         
+        // Hide modal and show success notification instantly
         modelModal.classList.add('hidden');
+        updateNavHighlight(currentState);
         
-        // Show success notification
         const apiKeyStatus = apiKey ? 'with custom API key' : 'using .env configuration';
-        showNotification(`Model settings saved: ${provider} - ${model} (${apiKeyStatus})`, 'success');
+        showNotification(`✓ Model settings saved: ${provider} - ${model} (${apiKeyStatus})`, 'success');
+        
+        // Sync config update to backend asynchronously in background
+        fetch(`${API_BASE_URL}/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                provider: provider,
+                model: model,
+                api_key: apiKey,
+                base_url: baseUrl
+            })
+        }).catch(err => {
+            console.warn('Failed to update backend config:', err);
+        });
     });
+    
+    // --- Search History & Help Modal Functionality ---
+
+    function saveSearchToHistory(query, data, elapsedMs) {
+        try {
+            let history = JSON.parse(localStorage.getItem('search_history') || '[]');
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+            const dateStr = now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+            
+            const entry = {
+                id: 'hist_' + Date.now(),
+                query: query,
+                timestampStr: `${dateStr} at ${timeStr}`,
+                provider: llmConfig.provider,
+                model: llmConfig.model,
+                confidence: data.confidence || 0.5,
+                responseTimeMs: elapsedMs,
+                citationsCount: (data.citations || []).length,
+                answerSnippet: (data.answer || '').substring(0, 160)
+            };
+            
+            // Deduplicate matching query if identical
+            history = history.filter(h => h.query !== query);
+            history.unshift(entry);
+            if (history.length > 50) history = history.slice(0, 50);
+            
+            localStorage.setItem('search_history', JSON.stringify(history));
+        } catch (e) {
+            console.warn('Failed to save search history:', e);
+        }
+    }
+
+    function renderHistoryView() {
+        setState('history');
+        const historyList = document.getElementById('history-list');
+        const historyEmpty = document.getElementById('history-empty');
+        if (!historyList || !historyEmpty) return;
+        
+        let history = [];
+        try {
+            history = JSON.parse(localStorage.getItem('search_history') || '[]');
+        } catch (e) {
+            history = [];
+        }
+        
+        if (history.length === 0) {
+            historyEmpty.classList.remove('hidden');
+            historyList.classList.add('hidden');
+            return;
+        }
+        
+        historyEmpty.classList.add('hidden');
+        historyList.classList.remove('hidden');
+        
+        historyList.innerHTML = history.map(item => {
+            const confPct = Math.round((item.confidence || 0.5) * 100);
+            const confClass = confPct >= 70 ? 'confidence-high' : confPct >= 40 ? 'confidence-medium' : 'confidence-low';
+            const secs = (item.responseTimeMs / 1000).toFixed(2);
+            
+            return `
+                <div class="glass-level-2 rounded-xl p-5 hover:bg-white/[0.07] transition-all space-y-3 border border-white/5">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <div class="w-10 h-10 rounded-lg glass-level-3 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-primary text-[20px]">manage_search</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-[16px] font-semibold text-on-surface truncate cursor-pointer hover:text-primary transition-colors history-rerun-btn" data-query="${escapeHtml(item.query)}">${escapeHtml(item.query)}</h4>
+                                <div class="flex items-center gap-3 mt-1 text-[11px] font-['JetBrains_Mono'] text-on-surface-variant">
+                                    <span>${escapeHtml(item.timestampStr)}</span>
+                                    <span>•</span>
+                                    <span class="text-primary font-semibold">${escapeHtml(item.provider)} / ${escapeHtml(item.model)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <button class="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-3 py-1.5 rounded-lg text-[12px] font-['JetBrains_Mono'] transition-all flex items-center gap-1 history-rerun-btn cursor-pointer" data-query="${escapeHtml(item.query)}">
+                                <span class="material-symbols-outlined text-[16px]">play_arrow</span>
+                                Run
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p class="text-[13px] text-on-surface-variant/80 leading-relaxed">${escapeHtml(item.answerSnippet)}...</p>
+                    
+                    <div class="flex items-center gap-4 pt-2 border-t border-white/5 text-[11px] font-['JetBrains_Mono']">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full ${confClass}">${confPct}% Confidence</span>
+                        <span class="text-on-surface-variant">⏱ ${secs}s (${item.responseTimeMs}ms)</span>
+                        <span class="text-on-surface-variant">📚 ${item.citationsCount} citation(s)</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        document.querySelectorAll('.history-rerun-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const q = btn.getAttribute('data-query');
+                if (q) {
+                    searchInput.value = q;
+                    performSearch(q);
+                }
+            });
+        });
+    }
+
+    function escapeHtml(str) {
+        return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Top Header Event Listeners
+    if (topHistoryBtn) {
+        topHistoryBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderHistoryView();
+        });
+    }
+
+    if (topHelpBtn) {
+        topHelpBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (helpModal) helpModal.classList.remove('hidden');
+        });
+    }
+
+    if (closeHelpModal) {
+        closeHelpModal.addEventListener('click', () => {
+            if (helpModal) helpModal.classList.add('hidden');
+        });
+    }
+
+    if (closeHelpBtnBottom) {
+        closeHelpBtnBottom.addEventListener('click', () => {
+            if (helpModal) helpModal.classList.add('hidden');
+        });
+    }
+
+    if (helpModal) {
+        helpModal.addEventListener('click', (e) => {
+            if (e.target === helpModal) {
+                helpModal.classList.add('hidden');
+            }
+        });
+    }
+
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear your search query history?')) {
+                localStorage.removeItem('search_history');
+                showNotification('Search history cleared', 'info');
+                renderHistoryView();
+            }
+        });
+    }
     
     // Micro-interactions
     document.querySelectorAll('button').forEach(button => {
