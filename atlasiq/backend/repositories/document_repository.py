@@ -256,6 +256,30 @@ class DocumentRepository:
 
         logger.info("Deleted chunks for document %s", document_id)
 
+    async def delete_document(self, document_id: str) -> None:
+        """Delete a document record from the database.
+
+        This removes only the document row itself. Chunks and vectors should
+        be deleted separately using delete_chunks_for_document and the vector
+        repository's delete_for_document method.
+
+        Args:
+            document_id: The document id to delete.
+
+        Raises:
+            DatabaseQueryError: If the query fails.
+        """
+        sql = text("DELETE FROM documents WHERE id = :document_id")
+        try:
+            async with self._client.session_factory() as session:
+                await session.execute(sql, {"document_id": document_id})
+                await session.commit()
+        except SQLAlchemyError as exc:
+            msg = f"Failed to delete document '{document_id}': {exc}"
+            raise DatabaseQueryError(msg) from exc
+
+        logger.info("Deleted document %s", document_id)
+
     async def count_chunks_for_document(self, document_id: str) -> int:
         """Count the chunks belonging to a document.
 

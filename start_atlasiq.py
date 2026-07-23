@@ -75,6 +75,7 @@ def main() -> None:
     # Set environment variables
     env = os.environ.copy()
     env["ATLASIQ_LOGGING__LEVEL"] = "INFO"
+    env["PYTHONIOENCODING"] = "utf-8"
     
     print(f"{GREEN}✓ Project root: {project_root}{RESET}")
     print(f"{GREEN}✓ Python: {python_exe}{RESET}")

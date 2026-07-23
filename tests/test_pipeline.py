@@ -47,6 +47,7 @@ def _build_pipeline() -> tuple[IngestionPipeline, dict[str, MagicMock]]:
 
     embedder = MagicMock()
     embedder.embed = MagicMock(return_value=[[0.1, 0.2], [0.3, 0.4]])
+    embedder.model_name = "test-model"
 
     document_repo = MagicMock()
     document_repo.get_document_by_id = AsyncMock(return_value=None)
@@ -54,6 +55,7 @@ def _build_pipeline() -> tuple[IngestionPipeline, dict[str, MagicMock]]:
     document_repo.insert_chunks = AsyncMock()
     document_repo.update_status = AsyncMock()
     document_repo.delete_chunks_for_document = AsyncMock()
+    document_repo.count_chunks_for_document = AsyncMock(return_value=0)
 
     vector_repo = MagicMock()
     vector_repo.store = MagicMock()

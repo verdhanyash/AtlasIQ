@@ -17,6 +17,7 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from atlasiq.retrieval.bm25_retriever import _tokenize
 from atlasiq.retrieval.models import RetrievedChunk
 
 if TYPE_CHECKING:
@@ -28,6 +29,16 @@ if TYPE_CHECKING:
     from atlasiq.retrieval.protocols import Retriever
 
 logger = logging.getLogger(__name__)
+
+# Minimum query length (in characters) to proceed with retrieval.
+# Queries shorter than this are meaningless natural-language questions.
+_MIN_QUERY_LENGTH = 3
+
+# Refusal message for invalid queries (matches the guardrail contract).
+_INVALID_QUERY_REFUSAL = (
+    "I don't have enough information to answer this question "
+    "based on the available documents."
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +121,36 @@ class QueryPipeline:
         if not normalized_question:
             raise ValueError("Question cannot be empty.")
 
+        # Validate query meaningfulness before expensive retrieval/LLM calls.
+        # Check 1: Minimum length — single/two-character queries are never
+        # meaningful natural-language questions (e.g. "a", "ab").
+        if len(normalized_question) < _MIN_QUERY_LENGTH:
+            logger.info(
+                "Query rejected: too short (%d chars < %d minimum)",
+                len(normalized_question),
+                _MIN_QUERY_LENGTH,
+            )
+            return QueryResponse(
+                answer=_INVALID_QUERY_REFUSAL,
+                citations=[],
+                confidence_score=0.0,
+                refusal_reason="query_too_short",
+            )
+
+        # Check 2: Stop-word-only queries — if every token is a stop word,
+        # the query carries no semantic content (e.g. "the the the",
+        # "is it?"). Uses the same tokenizer as BM25 for consistency.
+        if not _tokenize(normalized_question):
+            logger.info(
+                "Query rejected: no meaningful tokens after stop-word removal"
+            )
+            return QueryResponse(
+                answer=_INVALID_QUERY_REFUSAL,
+                citations=[],
+                confidence_score=0.0,
+                refusal_reason="no_meaningful_tokens",
+            )
+
         logger.info("Starting query pipeline")
         logger.debug("Starting query pipeline (%d characters)", len(normalized_question))
 
@@ -148,6 +189,31 @@ class QueryPipeline:
                 )
 
         logger.debug("Hydrated %d chunks from %d documents", len(retrieved_chunks), len(document_map))
+
+        # Log hydrated chunks for debugging
+        if retrieved_chunks:
+            logger.debug("Top retrieved chunks:")
+            for i, chunk in enumerate(retrieved_chunks[:5], 1):
+                logger.debug(
+                    "  [%d] %s (chunk %d, score %.4f)",
+                    i,
+                    chunk.filename,
+                    chunk.chunk.chunk_index,
+                    chunk.score,
+                )
+            
+            # DIAGNOSTIC: Log ALL hydrated chunks with full details
+            logger.debug("ALL hydrated chunks (top 10):")
+            for i, chunk in enumerate(retrieved_chunks[:10], 1):
+                logger.debug(
+                    "  HYDRATED[%d]: file=%s, chunk_id=%s, chunk_idx=%d, rrf_score=%.6f, content_preview=%s",
+                    i,
+                    chunk.filename,
+                    chunk.chunk.id[:8],
+                    chunk.chunk.chunk_index,
+                    chunk.score,
+                    chunk.chunk.content[:80].replace('\n', ' '),
+                )
 
         # Step 3: Build grounded prompt
         built_prompt = self._prompt_builder.build(normalized_question, retrieved_chunks)

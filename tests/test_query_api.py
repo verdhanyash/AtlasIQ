@@ -252,7 +252,7 @@ class TestBM25CacheInvalidation:
         )
 
         # Mock internal process to succeed and return chunks created
-        with patch.object(pipeline, "_process", AsyncMock(return_value=3)):
+        with patch.object(pipeline, "_process", AsyncMock(return_value=(3, {"test": "metadata"}))):
             result = await pipeline.ingest(dummy_file)
 
             # Verify ingestion successfully occurred (not skipped)

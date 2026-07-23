@@ -82,9 +82,9 @@ class HybridRetriever:
             optionally filtered by minimum score threshold.
         """
         logger.debug("Hybrid retrieval query: %s", question[:100])
-        
+
         candidate_lists = [retriever.retrieve(question) for retriever in self._retrievers]
-        
+
         # Log individual retriever results
         for i, candidates in enumerate(candidate_lists):
             retriever_name = type(self._retrievers[i]).__name__
@@ -94,9 +94,22 @@ class HybridRetriever:
                 len(candidates),
                 [f"{ref.score:.4f}" for ref in candidates[:3]] if candidates else "[]",
             )
-        
+            
+            # DIAGNOSTIC: Log individual chunks from each retriever with document IDs
+            if candidates and logger.isEnabledFor(logging.DEBUG):
+                for rank, ref in enumerate(candidates[:10], 1):
+                    logger.debug(
+                        "  %s[%d]: chunk_id=%s, doc_id=%s, chunk_idx=%d, score=%.4f",
+                        retriever_name,
+                        rank,
+                        ref.chunk_id[:8],
+                        ref.document_id[:8],
+                        ref.chunk_index,
+                        ref.score,
+                    )
+
         fused = self._fuse_rrf(candidate_lists)
-        
+
         # Apply minimum score filtering if configured
         if self._min_score > 0:
             pre_filter_count = len(fused)
@@ -108,7 +121,7 @@ class HybridRetriever:
                     self._min_score,
                     len(fused),
                 )
-        
+
         k = top_k if top_k is not None else self._default_top_k
 
         # Log fusion results
@@ -118,6 +131,19 @@ class HybridRetriever:
             [f"{ref.score:.4f}" for ref in fused[:5]] if fused else "[]",
         )
         
+        # DIAGNOSTIC: Log detailed RRF fusion results
+        if fused and logger.isEnabledFor(logging.DEBUG):
+            logger.debug("RRF fusion detailed results (top 10):")
+            for rank, ref in enumerate(fused[:10], 1):
+                logger.debug(
+                    "  RRF[%d]: chunk_id=%s, doc_id=%s, chunk_idx=%d, rrf_score=%.6f",
+                    rank,
+                    ref.chunk_id[:8],
+                    ref.document_id[:8],
+                    ref.chunk_index,
+                    ref.score,
+                )
+
         final_results = fused[:k]
         logger.info(
             "Hybrid retrieval fused %d lists into %d unique chunks (returning %d after filtering)",

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AtlasIQ | Knowledge Search</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "error-container": "#93000a",
+                    "surface-container": "#201f1f",
+                    "on-tertiary-container": "#636565",
+                    "on-secondary-fixed-variant": "#45464e",
+                    "outline-variant": "#444748",
+                    "on-primary-fixed": "#1a1c1c",
+                    "on-secondary": "#2f3037",
+                    "inverse-on-surface": "#313030",
+                    "error": "#ffb4ab",
+                    "secondary-container": "#45464e",
+                    "on-background": "#e5e2e1",
+                    "primary-fixed-dim": "#c6c6c7",
+                    "surface-variant": "#353434",
+                    "tertiary-fixed-dim": "#c6c6c7",
+                    "primary-container": "#e2e2e2",
+                    "tertiary-fixed": "#e2e2e2",
+                    "primary-fixed": "#e2e2e2",
+                    "primary": "#ffffff",
+                    "surface-container-low": "#1c1b1b",
+                    "surface-container-high": "#2a2a2a",
+                    "surface-container-lowest": "#0e0e0e",
+                    "secondary-fixed": "#e2e1eb",
+                    "surface-tint": "#c6c6c7",
+                    "on-tertiary-fixed": "#1a1c1c",
+                    "on-primary-fixed-variant": "#454747",
+                    "secondary": "#c6c6cf",
+                    "outline": "#8e9192",
+                    "on-error": "#690005",
+                    "secondary-fixed-dim": "#c6c6cf",
+                    "on-surface-variant": "#c4c7c8",
+                    "surface-container-highest": "#353434",
+                    "tertiary": "#ffffff",
+                    "surface": "#141313",
+                    "on-error-container": "#ffdad6",
+                    "inverse-primary": "#5d5f5f",
+                    "on-secondary-fixed": "#1a1b22",
+                    "on-primary-container": "#636565",
+                    "on-secondary-container": "#b4b4bd",
+                    "on-primary": "#2f3131",
+                    "surface-bright": "#3a3939",
+                    "tertiary-container": "#e2e2e2",
+                    "on-tertiary-fixed-variant": "#454747",
+                    "background": "#141313",
+                    "on-surface": "#e5e2e1",
+                    "on-tertiary": "#2f3131",
+                    "surface-dim": "#141313",
+                    "inverse-surface": "#e5e2e1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-desktop": "40px",
+                    "container-max": "1440px",
+                    "unit": "4px",
+                    "margin-mobile": "16px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Inter"],
+                    "label-sm": ["JetBrains Mono"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-xl": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-md": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "1.4", "letterSpacing": "0.04em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "500"}],
+                    "label-md": ["14px", {"lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #141313;
+            color: #e5e2e1;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .glass-level-1 {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-level-2 {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+        }
+
+        .glass-level-3 {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .ambient-glow:focus-within {
+            box-shadow: 0 0 20px 0 rgba(255, 255, 255, 0.12);
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+    </style>
+</head>
+<body class="flex min-h-screen overflow-hidden">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container dark:bg-surface-container backdrop-blur-2xl border-r border-white/10 bg-opacity-30 flex flex-col h-full p-margin-desktop gap-gutter z-50">
+<div class="flex flex-col gap-2 mb-12">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-background !text-[20px]" style="font-variation-settings: 'FILL' 1;">dataset</span>
+</div>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface">AtlasIQ</h1>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-60">Enterprise RAG</p>
+</div>
+<nav class="flex-1 flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="font-label-md text-label-md">Document Library</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">library_books</span>
+<span class="font-label-md text-label-md">Collections</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant font-medium hover:bg-white/10 transition-colors duration-200 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-label-md text-label-md">User Profile</span>
+</a>
+</nav>
+<button class="mt-auto glass-level-2 py-4 rounded-lg flex items-center justify-center gap-2 font-label-md text-label-md text-primary hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all duration-300">
+<span class="material-symbols-outlined !text-[20px]">upload</span>
+            Upload
+        </button>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-[240px] flex flex-col relative h-screen">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 w-full bg-surface/30 dark:bg-surface/30 backdrop-blur-3xl border-b border-white/5 flex justify-between items-center h-16 px-margin-desktop">
+<div class="flex items-center gap-4">
+<h2 class="font-headline-md text-headline-md font-bold text-on-surface">Knowledge Search</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-opacity active:opacity-80">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-opacity active:opacity-80">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-white/10 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional close-up studio portrait of a technology executive in a dark environment. The lighting is dramatic and low-key, reflecting the monochrome AtlasIQ aesthetic with soft white highlights on the subject's face. The mood is high-trust, industrial, and focused, utilizing deep blacks and subtle gray tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8-o7IRSVcYG5uFVhWTjtr-GLjA5JQi-NhrfGuCsGlFqWW8RoTYbDePZu9KGmlCvTaeYWEdHgvebWgrO9nHd6m7HMvxQaR0kF8GM64o53CF2cs2yDUsbsz6fHuKwtosirn0lSJhhgOS0p11RmRlhqbLoHQBM7wBFscGNogAHVHdq9E0o39zVjtl-tCQrOaXNt9l5_VjIeG5o9875sarVU2xIBB2g05h8NNx2feOBwFpLu2uVt2_gsD0q1X-BFChKlqPDD6xWQ5srY"/>
+</div>
+</div>
+</header>
+<!-- Search Canvas -->
+<div class="flex-1 flex flex-col items-center justify-center p-margin-desktop relative overflow-hidden">
+<!-- Atmospheric Background Element -->
+<div class="absolute inset-0 z-0 opacity-20 pointer-events-none">
+
+</div>
+<!-- Empty State Container -->
+<div class="w-full max-w-3xl z-10 flex flex-col items-center text-center">
+<div class="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+<div class="w-16 h-16 glass-level-2 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+<span class="material-symbols-outlined !text-[32px] text-primary">search_spark</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg mb-2">How can I help you today?</h3>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-md mx-auto">
+                        Get started by asking a question about your documents. AtlasIQ parses your enterprise data in seconds.
+                    </p>
+</div>
+<!-- Large Search Input (56px) -->
+<div class="w-full mb-12 glass-level-2 rounded-2xl p-2 ambient-glow focus-within:border-white/40 transition-all duration-300">
+<div class="relative flex items-center h-14">
+<span class="material-symbols-outlined absolute left-4 text-on-surface-variant">search</span>
+<input class="w-full h-full bg-transparent border-none focus:ring-0 pl-14 pr-32 font-body-lg text-body-lg text-primary placeholder:text-on-surface-variant/40" placeholder="Ask anything..." type="text"/>
+<div class="absolute right-2 flex items-center gap-2">
+<span class="hidden md:flex font-label-sm text-label-sm px-2 py-1 glass-level-1 rounded text-on-surface-variant/60">⌘ K</span>
+<button class="bg-primary text-background font-label-md text-label-md px-4 py-2 rounded-xl hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all">
+                                Search
+                            </button>
+</div>
+</div>
+</div>
+<!-- Suggestions Grid -->
+<div class="w-full grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<button class="glass-level-1 p-6 rounded-xl text-left hover:bg-white/5 transition-all group border-white/5 hover:border-white/20">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">trending_up</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-2 opacity-40">Finance</p>
+<p class="font-body-md text-body-md text-on-surface">What is the projected revenue for Q4?</p>
+</div>
+</div>
+</button>
+<button class="glass-level-1 p-6 rounded-xl text-left hover:bg-white/5 transition-all group border-white/5 hover:border-white/20">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">description</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-2 opacity-40">Analysis</p>
+<p class="font-body-md text-body-md text-on-surface">Summarize the market analysis report.</p>
+</div>
+</div>
+</button>
+<button class="glass-level-1 p-6 rounded-xl text-left hover:bg-white/5 transition-all group border-white/5 hover:border-white/20">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">shield</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-2 opacity-40">Legal</p>
+<p class="font-body-md text-body-md text-on-surface">Review the termination clauses in current vendor contracts.</p>
+</div>
+</div>
+</button>
+<button class="glass-level-1 p-6 rounded-xl text-left hover:bg-white/5 transition-all group border-white/5 hover:border-white/20">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">hub</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-2 opacity-40">Strategy</p>
+<p class="font-body-md text-body-md text-on-surface">Identify cross-departmental synergy opportunities.</p>
+</div>
+</div>
+</button>
+</div>
+<!-- Footer Hint -->
+<div class="mt-16 flex items-center gap-3 font-label-sm text-label-sm text-on-surface-variant/40">
+<span class="material-symbols-outlined !text-[16px]">info</span>
+                    AtlasIQ searches across 2,492 indexed enterprise documents
+                </div>
+</div>
+</div>
+<!-- System Status Bar -->
+<footer class="h-10 px-margin-desktop bg-surface-container-lowest/50 backdrop-blur-md flex items-center justify-between border-t border-white/5">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant/60">System Ready</span>
+</div>
+<div class="w-px h-3 bg-white/10"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant/60">v1.24.0-pro</span>
+</div>
+<div class="flex items-center gap-4 font-label-sm text-label-sm text-on-surface-variant/60">
+<span class="font-medium text-primary">JetBrains Mono</span>
+<span>Inter</span>
+</div>
+</footer>
+</main>
+<!-- Floating Action Button (Supressed as per logic for Search/Empty State canvas focus) -->
+<script>
+        // Simple Micro-interactions
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('mousedown', () => {
+                button.classList.add('scale-95');
+            });
+            button.addEventListener('mouseup', () => {
+                button.classList.remove('scale-95');
+            });
+            button.addEventListener('mouseleave', () => {
+                button.classList.remove('scale-95');
+            });
+        });
+
+        // Search Input Focus Interaction
+        const searchInput = document.querySelector('input[type="text"]');
+        const searchContainer = searchInput.parentElement.parentElement;
+
+        searchInput.addEventListener('focus', () => {
+            searchContainer.classList.add('scale-[1.02]');
+        });
+
+        searchInput.addEventListener('blur', () => {
+            searchContainer.classList.remove('scale-[1.02]');
+        });
+    </script>
+</body></html>

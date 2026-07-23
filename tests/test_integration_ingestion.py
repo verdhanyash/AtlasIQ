@@ -35,6 +35,7 @@ def _fake_embedder() -> MagicMock:
     embedder.embed = MagicMock(
         side_effect=lambda texts: [[0.1] * 4 for _ in texts]
     )
+    embedder.model_name = "test-embedding-model"
     return embedder
 
 

@@ -47,7 +47,7 @@ class PostgresClient:
             echo=False,
         )
         self.session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
-            self.engine,
+            bind=self.engine,
             expire_on_commit=False,
         )
         logger.info("PostgreSQL client initialized: pool_min=%d, pool_max=%d", pool_min_size, pool_max_size)

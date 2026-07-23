@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AtlasIQ | Enterprise RAG</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=JetBrains+Mono:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "error-container": "#93000a",
+                    "surface-container": "#201f1f",
+                    "on-tertiary-container": "#636565",
+                    "on-secondary-fixed-variant": "#45464e",
+                    "outline-variant": "#444748",
+                    "on-primary-fixed": "#1a1c1c",
+                    "on-secondary": "#2f3037",
+                    "inverse-on-surface": "#313030",
+                    "error": "#ffb4ab",
+                    "secondary-container": "#45464e",
+                    "on-background": "#e5e2e1",
+                    "primary-fixed-dim": "#c6c6c7",
+                    "surface-variant": "#353434",
+                    "tertiary-fixed-dim": "#c6c6c7",
+                    "primary-container": "#e2e2e2",
+                    "tertiary-fixed": "#e2e2e2",
+                    "primary-fixed": "#e2e2e2",
+                    "primary": "#ffffff",
+                    "surface-container-low": "#1c1b1b",
+                    "surface-container-high": "#2a2a2a",
+                    "surface-container-lowest": "#0e0e0e",
+                    "secondary-fixed": "#e2e1eb",
+                    "surface-tint": "#c6c6c7",
+                    "on-tertiary-fixed": "#1a1c1c",
+                    "on-primary-fixed-variant": "#454747",
+                    "secondary": "#c6c6cf",
+                    "outline": "#8e9192",
+                    "on-error": "#690005",
+                    "secondary-fixed-dim": "#c6c6cf",
+                    "on-surface-variant": "#c4c7c8",
+                    "surface-container-highest": "#353434",
+                    "tertiary": "#ffffff",
+                    "surface": "#141313",
+                    "on-error-container": "#ffdad6",
+                    "inverse-primary": "#5d5f5f",
+                    "on-secondary-fixed": "#1a1b22",
+                    "on-primary-container": "#636565",
+                    "on-secondary-container": "#b4b4bd",
+                    "on-primary": "#2f3131",
+                    "surface-bright": "#3a3939",
+                    "tertiary-container": "#e2e2e2",
+                    "on-tertiary-fixed-variant": "#454747",
+                    "background": "#141313",
+                    "on-surface": "#e5e2e1",
+                    "on-tertiary": "#2f3131",
+                    "surface-dim": "#141313",
+                    "inverse-surface": "#e5e2e1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-desktop": "40px",
+                    "container-max": "1440px",
+                    "unit": "4px",
+                    "margin-mobile": "16px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Inter"],
+                    "label-sm": ["JetBrains Mono"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-xl": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-md": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "1.4", "letterSpacing": "0.04em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "500"}],
+                    "label-md": ["14px", {"lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0e0e0e;
+            color: #e5e2e1;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .liquid-glass-1 {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .liquid-glass-2 {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+        }
+
+        .liquid-glass-3 {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .active-glow {
+            box-shadow: 0 0 20px 0 rgba(255, 255, 255, 0.12);
+        }
+
+        .citation-underline {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            text-decoration-thickness: 1px;
+            text-decoration-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .stagger-in {
+            animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Hide scrollbars but keep functionality */
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex min-h-screen overflow-hidden">
+<!-- SIDEBAR ANCHOR -->
+<aside class="fixed left-0 top-0 h-full w-[240px] liquid-glass-1 flex flex-col p-10 gap-6 z-40 border-r border-white/5">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-background">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dataset</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface">AtlasIQ</h1>
+<p class="text-xs font-label-sm text-on-surface-variant uppercase tracking-widest opacity-50">Enterprise RAG</p>
+</div>
+</div>
+<button class="w-full py-3 liquid-glass-2 rounded-lg font-label-md text-primary flex items-center justify-center gap-2 hover:active-glow transition-all duration-300">
+<span class="material-symbols-outlined text-sm">add</span>
+            Upload
+        </button>
+<nav class="flex-1 flex flex-col gap-2 mt-4">
+<div class="text-primary font-bold bg-white/5 rounded-lg flex items-center gap-3 px-4 py-3 cursor-pointer transition-transform active:scale-95">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+<span class="font-label-md">Document Library</span>
+</div>
+<div class="text-on-surface-variant font-medium hover:bg-white/10 flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-colors">
+<span class="material-symbols-outlined" data-icon="library_books">library_books</span>
+<span class="font-label-md">Collections</span>
+</div>
+<div class="text-on-surface-variant font-medium hover:bg-white/10 flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md">Settings</span>
+</div>
+</nav>
+<div class="mt-auto pt-6 border-t border-white/5 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high border border-white/10">
+<img class="w-full h-full object-cover" data-alt="A professional, minimalist profile avatar for a tech professional in grayscale, shot with high-key studio lighting against a dark neutral background, conveying a high-trust enterprise software aesthetic. The style is clean, sharp, and modern, fitting a monochrome design system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzPyhgvTd-V_mrGfoMEAMKxpdaMwXe0ietCf9JlcnOm6b8Nd30LhyKNEK5qLHOBvX6G2w5HVo0gN5v-cgd0bIQJF0Hh43zN-onLuufdvWTeUoauhd_rISzc0AmOrGd5k944K3gPEKCZTBH3_5txSOG8GRF5-xuP5aSaOZ6uTsINmQ4HbiljepONNCVjhcTCPLBRldaGYAkUV8D3qx82k9SUqFv9atZo4lo2KtiQ2CXjjRoPH8mWESj6_ShQJBHpNwFtfGfVy59p0M"/>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="font-label-md text-on-surface truncate">User Profile</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">more_vert</span>
+</div>
+</aside>
+<!-- MAIN CONTENT CANVAS -->
+<main class="flex-1 ml-[240px] h-screen overflow-y-auto flex flex-col items-center relative">
+<!-- TOP APP BAR ANCHOR -->
+<header class="sticky top-0 z-50 w-full flex justify-between items-center h-16 px-10 backdrop-blur-3xl border-b border-white/5 bg-surface/30">
+<div class="flex items-center gap-4">
+<span class="font-label-sm text-on-surface-variant">Session: Climate Analysis 2024</span>
+<span class="w-1 h-1 rounded-full bg-white/20"></span>
+<span class="font-label-sm text-on-surface-variant opacity-60">Last saved 2m ago</span>
+</div>
+<div class="flex items-center gap-6">
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-opacity cursor-pointer" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-opacity cursor-pointer" data-icon="help_outline">help_outline</span>
+</div>
+</header>
+<!-- CENTERED RAG CONTAINER -->
+<div class="w-full max-w-[800px] px-margin-desktop py-12 flex flex-col gap-12">
+<!-- QUERY STATE (INPUT) -->
+<section class="w-full">
+<div class="relative group">
+<input class="w-full h-14 pl-14 pr-24 rounded-full liquid-glass-2 border-white/10 focus:border-white/40 focus:ring-0 text-body-md text-on-surface transition-all active-glow" placeholder="What are the key findings on climate data?" type="text"/>
+<div class="absolute left-5 top-1/2 -translate-y-1/2 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+</div>
+<div class="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+<kbd class="px-2 py-0.5 rounded border border-white/20 bg-white/5 font-label-sm text-[10px] text-on-surface-variant">⌘</kbd>
+<kbd class="px-2 py-0.5 rounded border border-white/20 bg-white/5 font-label-sm text-[10px] text-on-surface-variant">K</kbd>
+</div>
+</div>
+</section>
+<!-- ANSWER CARD -->
+<section class="stagger-in" style="animation-delay: 0.1s;">
+<div class="liquid-glass-2 p-8 rounded-2xl flex flex-col gap-6 relative overflow-hidden">
+<!-- Accent Bar (Success/Confidence) -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-[#4CAF50]/50"></div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-[#4CAF50]/10 border border-[#4CAF50]/20">
+<span class="material-symbols-outlined text-xs text-[#4CAF50]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-label-sm text-[#4CAF50] text-[10px] uppercase tracking-wider">High Confidence (98%)</span>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant/40">
+<span class="material-symbols-outlined text-sm cursor-pointer hover:text-on-surface">content_copy</span>
+<span class="material-symbols-outlined text-sm cursor-pointer hover:text-on-surface">thumb_up</span>
+<span class="material-symbols-outlined text-sm cursor-pointer hover:text-on-surface">thumb_down</span>
+</div>
+</div>
+<div class="font-body-lg text-on-surface leading-relaxed">
+                        Based on the aggregated satellite telemetry and ground station reports from the last fiscal year, the <span class="citation-underline">mean global surface temperature increase</span> has accelerated to 1.18°C above pre-industrial levels<sup>[1]</sup>. This trend is particularly evident in the Arctic sector, where <span class="citation-underline">permafrost degradation</span> has released significant methane volumes, creating a self-reinforcing feedback loop that was previously under-projected in the 2022 models<sup>[2]</sup>. Furthermore, ocean acidification levels in the North Atlantic have reached a <span class="citation-underline">critical pH threshold</span> of 8.04, impacting biodiversity metrics<sup>[3]</sup>.
+                    </div>
+<div class="flex items-center gap-3 pt-4 border-t border-white/10">
+<span class="text-xs font-label-sm text-on-surface-variant uppercase tracking-tighter opacity-40">Synthesized from 24 sources</span>
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full liquid-glass-3 border border-white/10 flex items-center justify-center text-[10px]">A</div>
+<div class="w-6 h-6 rounded-full liquid-glass-3 border border-white/10 flex items-center justify-center text-[10px]">B</div>
+<div class="w-6 h-6 rounded-full liquid-glass-3 border border-white/10 flex items-center justify-center text-[10px]">C</div>
+</div>
+</div>
+</div>
+</section>
+<!-- CITATION GRID -->
+<section class="flex flex-col gap-6">
+<div class="flex items-center justify-between px-2">
+<h3 class="font-label-md text-on-surface-variant uppercase tracking-widest text-xs opacity-60">Verified Sources</h3>
+<button class="text-xs font-label-sm hover:text-primary transition-colors flex items-center gap-1">
+                        View All
+                        <span class="material-symbols-outlined text-xs">arrow_forward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Citation Card 1 -->
+<div class="liquid-glass-2 p-5 rounded-xl flex flex-col gap-4 hover:border-white/20 transition-all stagger-in" style="animation-delay: 0.3s;">
+<div class="flex items-center gap-2">
+<span class="w-5 h-5 flex items-center justify-center bg-white/10 text-on-surface font-label-sm text-[10px] rounded">1</span>
+<span class="font-label-sm text-on-surface truncate">Global_Temp_Report_v4.pdf</span>
+</div>
+<div class="bg-surface-container-lowest/50 p-3 rounded-lg border border-white/5">
+<p class="font-label-sm text-on-surface-variant leading-tight text-[11px] font-medium mb-1">PAGE 42 / LINE 12</p>
+<p class="font-label-sm text-on-surface/80 text-[12px] leading-relaxed italic">
+                                "The acceleration of surface temperatures correlates directly with the reduction in albedo effect..."
+                            </p>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<span class="font-label-sm text-[10px] text-on-surface-variant opacity-50 uppercase">PDF • 12.4 MB</span>
+<span class="material-symbols-outlined text-sm text-on-surface-variant">open_in_new</span>
+</div>
+</div>
+<!-- Citation Card 2 -->
+<div class="liquid-glass-2 p-5 rounded-xl flex flex-col gap-4 hover:border-white/20 transition-all stagger-in" style="animation-delay: 0.4s;">
+<div class="flex items-center gap-2">
+<span class="w-5 h-5 flex items-center justify-center bg-white/10 text-on-surface font-label-sm text-[10px] rounded">2</span>
+<span class="font-label-sm text-on-surface truncate">Arctic_Telemetry_Log.xlsx</span>
+</div>
+<div class="bg-surface-container-lowest/50 p-3 rounded-lg border border-white/5">
+<p class="font-label-sm text-on-surface-variant leading-tight text-[11px] font-medium mb-1">SHEET: METHANE_DATA</p>
+<code class="font-label-sm text-on-surface/80 text-[12px] leading-relaxed block overflow-hidden whitespace-nowrap text-ellipsis">
+                                [04:22:11] METH_FLUX: +14.2% YoY (P_VAL: 0.001)
+                            </code>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<span class="font-label-sm text-[10px] text-on-surface-variant opacity-50 uppercase">DATASET • CSV</span>
+<span class="material-symbols-outlined text-sm text-on-surface-variant">open_in_new</span>
+</div>
+</div>
+<!-- Citation Card 3 -->
+<div class="liquid-glass-2 p-5 rounded-xl flex flex-col gap-4 hover:border-white/20 transition-all stagger-in" style="animation-delay: 0.5s;">
+<div class="flex items-center gap-2">
+<span class="w-5 h-5 flex items-center justify-center bg-white/10 text-on-surface font-label-sm text-[10px] rounded">3</span>
+<span class="font-label-sm text-on-surface truncate">Oceanic_pH_Trends_2023.docx</span>
+</div>
+<div class="bg-surface-container-lowest/50 p-3 rounded-lg border border-white/5">
+<p class="font-label-sm text-on-surface-variant leading-tight text-[11px] font-medium mb-1">SECTION 2.1 / ABSTRACT</p>
+<p class="font-label-sm text-on-surface/80 text-[12px] leading-relaxed italic">
+                                "Observations indicate the North Atlantic has reached 8.04 pH, signaling the onset of..."
+                            </p>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<span class="font-label-sm text-[10px] text-on-surface-variant opacity-50 uppercase">DOCX • 2.1 MB</span>
+<span class="material-symbols-outlined text-sm text-on-surface-variant">open_in_new</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ACTION FOOTER -->
+<section class="flex items-center justify-center gap-6 py-8 border-t border-white/5 stagger-in" style="animation-delay: 0.7s;">
+<button class="flex items-center gap-2 px-6 py-2.5 rounded-lg liquid-glass-2 text-on-surface-variant font-label-sm hover:text-primary transition-all">
+<span class="material-symbols-outlined text-sm">refresh</span>
+                    Regenerate
+                </button>
+<button class="flex items-center gap-2 px-6 py-2.5 rounded-lg liquid-glass-2 text-on-surface-variant font-label-sm hover:text-primary transition-all">
+<span class="material-symbols-outlined text-sm">share</span>
+                    Share Result
+                </button>
+<button class="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-background font-label-sm hover:active-glow transition-all">
+<span class="material-symbols-outlined text-sm">analytics</span>
+                    Deep Analysis
+                </button>
+</section>
+</div>
+<!-- BACKGROUND AMBIANCE -->
+<div class="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
+<div class="absolute -top-[20%] -left-[10%] w-[600px] h-[600px] bg-white/5 blur-[120px] rounded-full"></div>
+<div class="absolute bottom-[10%] -right-[5%] w-[400px] h-[400px] bg-white/3 blur-[100px] rounded-full"></div>
+</div>
+</main>
+<script>
+        // Micro-interactions for the Liquid Glass theme
+        document.querySelectorAll('.liquid-glass-2').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+
+        // Handle Command+K focus logic
+        window.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                document.querySelector('input').focus();
+            }
+        });
+
+        // Fade in animation trigger on load
+        window.addEventListener('DOMContentLoaded', () => {
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 1s ease';
+                document.body.style.opacity = '1';
+            }, 50);
+        });
+    </script>
+</body></html>

@@ -19,6 +19,7 @@ from atlasiq.backend.core.config import Settings
 from atlasiq.backend.core.dependencies import (
     get_document_repository,
     get_ingestion_pipeline,
+    get_qdrant_client,
     get_settings,
 )
 from atlasiq.backend.core.exceptions import (
@@ -27,6 +28,7 @@ from atlasiq.backend.core.exceptions import (
     DocumentValidationError,
 )
 from atlasiq.backend.repositories.document_repository import DocumentRepository
+from atlasiq.backend.repositories.vector_repository import ChunkVectorRepository
 from atlasiq.ingestion.pipeline import IngestionPipeline, IngestionResult
 
 logger = logging.getLogger(__name__)
@@ -80,6 +82,7 @@ async def upload_document(
         "status": result.status.value,
         "chunks_created": result.chunks_created,
         "skipped": result.skipped,
+        "metadata": result.metadata or {},
     }
 
 
@@ -154,6 +157,50 @@ async def list_documents(
         "limit": limit,
         "offset": offset,
         "count": len(documents),
+    }
+
+
+@router.delete("/documents/{document_id}")
+async def delete_document(
+    document_id: str,
+    document_repo: DocumentRepository = Depends(get_document_repository),
+) -> dict[str, Any]:
+    """Delete a document and all its associated data.
+
+    Removes the document record, all its chunks from PostgreSQL, and all
+    its vectors from Qdrant.
+
+    Args:
+        document_id: The document's unique identifier.
+        document_repo: The injected document repository.
+
+    Returns:
+        JSON confirmation of deletion.
+
+    Raises:
+        DocumentNotFoundError: If no document with the given id exists.
+    """
+    # Check if document exists
+    document = await document_repo.get_document_by_id(document_id)
+    if document is None:
+        raise DocumentNotFoundError(f"Document not found: {document_id}")
+
+    # Delete chunks from PostgreSQL
+    await document_repo.delete_chunks_for_document(document_id)
+
+    # Delete vectors from Qdrant
+    qdrant_client = get_qdrant_client()
+    vector_repo = ChunkVectorRepository(qdrant_client)
+    vector_repo.delete_for_document(document_id)
+
+    # Delete document record
+    await document_repo.delete_document(document_id)
+
+    logger.info("Deleted document: %s", document_id)
+
+    return {
+        "message": "Document deleted successfully",
+        "document_id": document_id,
     }
 
 

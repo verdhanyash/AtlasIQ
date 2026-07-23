@@ -16,10 +16,11 @@ registry, so the decision survives process restarts.
 from __future__ import annotations
 
 import logging
+import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from atlasiq.backend.domain import (
     ChunkRecord,
@@ -60,12 +61,14 @@ class IngestionResult:
         status: Whether the document was NEW, MODIFIED, or UNCHANGED.
         chunks_created: Number of chunks written (0 when skipped).
         skipped: True when the document was UNCHANGED and no work was done.
+        metadata: Additional ingestion metadata (performance, parser info, etc.)
     """
 
     document_id: str
     status: ChangeStatus
     chunks_created: int
     skipped: bool
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class IngestionPipeline:
@@ -136,8 +139,22 @@ class IngestionPipeline:
 
         if status is ChangeStatus.UNCHANGED:
             logger.info("Skipping unchanged document %s (%s)", document_id, metadata.file_name)
-            return IngestionResult(document_id, status, chunks_created=0, skipped=True)
 
+            # Include metadata even for unchanged documents
+            result_metadata = {
+                "filename": metadata.file_name,
+                "file_type": metadata.file_extension,
+                "file_size_bytes": metadata.file_size_bytes,
+                "parser": self._get_parser_name(metadata.file_extension),
+                "embedding_model": self._get_embedding_model_name(),
+                "reason": "Content hash unchanged - skipped re-indexing",
+            }
+
+            return IngestionResult(
+                document_id, status, chunks_created=0, skipped=True, metadata=result_metadata
+            )
+
+        old_chunk_count = 0
         if status is ChangeStatus.MODIFIED:
             # Safe re-indexing (DL-018): delete the document's existing chunks
             # from BOTH stores before re-inserting. Delete-then-insert ordering
@@ -146,10 +163,19 @@ class IngestionPipeline:
             # document row itself is kept (id + created_at stable); only its
             # chunks are replaced.
             logger.info("Re-indexing modified document %s (%s)", document_id, metadata.file_name)
+            old_chunk_count = await self._document_repo.count_chunks_for_document(document_id)
             await self._document_repo.delete_chunks_for_document(document_id)
             self._vector_repo.delete_for_document(document_id)
 
-        chunks_created = await self._process(document_id, file_path, metadata, file_hash, existing)
+        chunks_created, result_metadata = await self._process(
+            document_id, file_path, metadata, file_hash, existing
+        )
+
+        # Add change metadata for modified documents
+        if status is ChangeStatus.MODIFIED:
+            result_metadata["old_chunk_count"] = old_chunk_count
+            result_metadata["chunks_changed"] = chunks_created - old_chunk_count
+            result_metadata["reason"] = "Content modified - re-indexed"
 
         logger.info(
             "Ingested %s as %s (%d chunks)", metadata.file_name, status.value, chunks_created
@@ -159,7 +185,7 @@ class IngestionPipeline:
 
         await invalidate_bm25_retriever()
 
-        return IngestionResult(document_id, status, chunks_created, skipped=False)
+        return IngestionResult(document_id, status, chunks_created, skipped=False, metadata=result_metadata)
 
     async def _process(
         self,
@@ -168,7 +194,7 @@ class IngestionPipeline:
         metadata: DocumentMetadata,
         file_hash: str,
         existing: DocumentRecord | None,
-    ) -> int:
+    ) -> tuple[int, dict[str, Any]]:
         """Parse, chunk, embed, and persist a document; manage its status.
 
         Shared by the NEW and MODIFIED paths. The document row is upserted as
@@ -187,8 +213,9 @@ class IngestionPipeline:
                 preserved so re-ingestion does not reset the creation time.
 
         Returns:
-            The number of chunks created.
+            Tuple of (chunks created, result metadata dict).
         """
+        start_time = time.time()
         now = datetime.now(UTC)
         document = DocumentRecord(
             id=document_id,
@@ -204,8 +231,16 @@ class IngestionPipeline:
         await self._document_repo.upsert_document(document)
 
         try:
+            # Parsing
+            parse_start = time.time()
             text = self._parser.parse(file_path)
+            parse_time = time.time() - parse_start
+
+            # Chunking
+            chunk_start = time.time()
             chunk_texts = self._chunker.chunk(text)
+            chunk_time = time.time() - chunk_start
+
             records = [
                 ChunkRecord(
                     id=chunk_id(document_id, index),
@@ -215,10 +250,17 @@ class IngestionPipeline:
                 )
                 for index, content in enumerate(chunk_texts)
             ]
-            vectors = self._embedder.embed(chunk_texts)
 
+            # Embedding
+            embed_start = time.time()
+            vectors = self._embedder.embed(chunk_texts)
+            embed_time = time.time() - embed_start
+
+            # Storage
+            store_start = time.time()
             await self._document_repo.insert_chunks(records)
             self._vector_repo.store(records, vectors)
+            store_time = time.time() - store_start
 
             # Finalise: record the word count and mark COMPLETED in one upsert
             # (word_count is only known post-parse, after the PROCESSING upsert).
@@ -226,12 +268,38 @@ class IngestionPipeline:
             document.word_count = len(text.split())
             document.updated_at = datetime.now(UTC)
             await self._document_repo.upsert_document(document)
+
+            total_time = time.time() - start_time
+
+            # Build result metadata
+            result_metadata = {
+                "filename": metadata.file_name,
+                "file_type": metadata.file_extension,
+                "file_size_bytes": metadata.file_size_bytes,
+                "word_count": document.word_count,
+                "character_count": len(text),
+                "parser": self._get_parser_name(metadata.file_extension),
+                "chunker": f"{self._chunker.chunk_size}c/{self._chunker.chunk_overlap}c",
+                "embedding_model": self._get_embedding_model_name(),
+                "vector_count": len(vectors),
+                "timings": {
+                    "parse_time_ms": round(parse_time * 1000, 2),
+                    "chunk_time_ms": round(chunk_time * 1000, 2),
+                    "embed_time_ms": round(embed_time * 1000, 2),
+                    "store_time_ms": round(store_time * 1000, 2),
+                    "total_time_ms": round(total_time * 1000, 2),
+                },
+                "storage": {
+                    "postgresql": "stored",
+                    "qdrant": "indexed",
+                },
+            }
         except Exception:
             await self._document_repo.update_status(document_id, DocumentStatus.FAILED)
             logger.exception("Ingestion failed for %s; status set to FAILED", document_id)
             raise
 
-        return len(records)
+        return len(records), result_metadata
 
     @staticmethod
     def _decide_status(existing: DocumentRecord | None, file_hash: str) -> ChangeStatus:
@@ -268,3 +336,33 @@ class IngestionPipeline:
             A deterministic UUID string.
         """
         return str(uuid.uuid5(_DOCUMENT_ID_NAMESPACE, str(file_path.resolve())))
+
+    @staticmethod
+    def _get_parser_name(file_extension: str) -> str:
+        """Get a human-readable parser name based on file extension.
+
+        Args:
+            file_extension: The file extension (e.g., '.pdf', '.docx').
+
+        Returns:
+            Parser name string.
+        """
+        parser_map = {
+            ".pdf": "PyPDF2",
+            ".docx": "python-docx",
+            ".txt": "Plain Text",
+            ".md": "Markdown",
+        }
+        return parser_map.get(file_extension.lower(), "Generic")
+
+    def _get_embedding_model_name(self) -> str:
+        """Get a human-readable embedding model name.
+
+        Returns:
+            Embedding model name string.
+        """
+        model_name = self._embedder.model_name
+        # Extract just the model name from full path like "nomic-ai/nomic-embed-text-v1.5"
+        if "/" in model_name:
+            return model_name.split("/")[-1]
+        return model_name

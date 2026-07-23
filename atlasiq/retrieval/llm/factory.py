@@ -15,6 +15,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from atlasiq.backend.core.exceptions import ConfigurationError
+from atlasiq.retrieval.llm.mock_provider import MockProvider
 from atlasiq.retrieval.llm.nvidia_provider import NvidiaProvider
 from atlasiq.retrieval.llm.ollama_provider import OllamaProvider
 
@@ -34,10 +35,8 @@ def create_llm_provider(
 
     Args:
         llm_config: Shared LLM settings including ``provider`` selector.
-        ollama_config: Ollama-specific settings (used when provider is
-            ``"ollama"``).
-        nvidia_config: NVIDIA-specific settings (used when provider is
-            ``"nvidia"``).
+        ollama_config: Ollama-specific settings.
+        nvidia_config: NVIDIA-specific settings.
 
     Returns:
         A concrete provider satisfying the :class:`LLMProvider` protocol.
@@ -47,6 +46,10 @@ def create_llm_provider(
             value.
     """
     provider = llm_config.provider
+
+    if provider == "mock":
+        logger.info("Creating Mock LLM provider")
+        return MockProvider(llm_config)
 
     if provider == "ollama":
         logger.info("Creating Ollama LLM provider")
@@ -58,6 +61,6 @@ def create_llm_provider(
 
     msg = (
         f"Unsupported LLM provider: '{provider}'. "
-        f"Supported providers: 'ollama', 'nvidia'."
+        f"Supported providers: 'ollama', 'nvidia', 'mock'."
     )
     raise ConfigurationError(msg)

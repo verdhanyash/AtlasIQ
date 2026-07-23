@@ -93,7 +93,14 @@ class OllamaProvider:
             msg = f"Ollama request timed out: {exc}"
             raise LLMProviderError(msg) from exc
         except httpx.HTTPStatusError as exc:
-            msg = f"Ollama returned HTTP {exc.response.status_code}: {exc}"
+            if exc.response.status_code == 404:
+                msg = (
+                    f"Ollama returned HTTP 404 for model '{self._model}'. "
+                    f"Please pull the model using `ollama pull {self._model}` in your terminal, "
+                    f"or set ATLASIQ_LLM__PROVIDER=mock in environment/config for local demo mode."
+                )
+            else:
+                msg = f"Ollama returned HTTP {exc.response.status_code}: {exc}"
             raise LLMProviderError(msg) from exc
         except httpx.HTTPError as exc:
             msg = f"Ollama request failed: {exc}"
