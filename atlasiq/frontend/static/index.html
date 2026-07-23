@@ -30,6 +30,27 @@
             border-radius: 8px !important;
         }
         
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 1000px #12141c inset !important;
+            -webkit-text-fill-color: #f1f5f9 !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        input {
+            background-color: transparent !important;
+            color: #f1f5f9 !important;
+        }
+
+        input:focus {
+            background-color: transparent !important;
+            color: #f1f5f9 !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+        
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
@@ -324,17 +345,17 @@
             </div>
 
             <!-- Large Search Input -->
-            <div class="w-full max-w-3xl mb-12 glass-level-2 rounded-2xl p-2 transition-all duration-300">
+            <div class="w-full max-w-3xl mb-12 bg-surface-container-high/40 backdrop-blur-2xl border border-white/10 rounded-2xl p-2 transition-all duration-300 focus-within:border-white/25 focus-within:shadow-[0_0_30px_rgba(255,255,255,0.05)]">
                 <div class="relative flex items-center h-14">
-                    <span class="material-symbols-outlined absolute left-4 text-on-surface-variant">search</span>
+                    <span class="material-symbols-outlined absolute left-4 text-on-surface-variant/60 text-[22px]">search</span>
                     <input 
-                        class="w-full h-full bg-transparent border-none focus:ring-0 pl-14 pr-32 text-[18px] text-primary placeholder:text-on-surface-variant/40" 
+                        class="w-full h-full bg-transparent border-none focus:ring-0 focus:outline-none pl-14 pr-32 text-[16px] text-on-surface placeholder:text-on-surface-variant/40 font-normal" 
                         placeholder="Ask anything..." 
                         type="text"
                         id="search-input"
                     />
                     <div class="absolute right-2 flex items-center gap-2">
-                        <button class="bg-primary text-background font-label-md text-[14px] px-4 py-2 rounded-xl hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all" id="search-btn">
+                        <button class="bg-white/10 hover:bg-white/20 border border-white/20 text-on-surface font-medium text-[14px] px-5 py-2.5 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer" id="search-btn">
                             Search
                         </button>
                     </div>
