@@ -62,3 +62,24 @@ async def health_check(
         },
         "timestamp": datetime.now(tz=UTC).isoformat(),
     }
+
+
+@router.get("/config/check")
+async def check_config(
+    settings: Settings = Depends(get_settings),
+) -> dict[str, Any]:
+    """Check which configuration values are set in the environment.
+
+    This endpoint allows the frontend to determine if API keys
+    are already configured in .env files, avoiding redundant
+    user prompts for credentials that already exist.
+
+    Returns:
+        Dictionary indicating which provider configurations are available.
+    """
+    return {
+        "nvidia_api_key_configured": bool(settings.nvidia.api_key),
+        "openai_api_key_configured": bool(settings.openai.api_key),
+        "current_provider": settings.llm.provider,
+        "current_model": settings.llm.model,
+    }

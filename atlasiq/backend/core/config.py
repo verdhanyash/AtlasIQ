@@ -47,7 +47,12 @@ def _load_yaml_config(path: Path) -> dict[str, Any]:
 class ServerConfig(BaseSettings):
     """HTTP server configuration."""
 
-    model_config = SettingsConfigDict(env_prefix="ATLASIQ_SERVER__")
+    model_config = SettingsConfigDict(
+        env_prefix="ATLASIQ_SERVER__",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
     host: str = "0.0.0.0"
     port: int = 8000
@@ -134,7 +139,7 @@ class RetrievalConfig(BaseSettings):
     rerank_top_k: int = 5
     rrf_k: int = 60
     min_confidence_score: float = 0.1
-    hybrid_min_score: float = 0.0
+    hybrid_min_score: float = 0.020  # Filter weak chunks (increased to reduce false positives)
 
 
 class RerankerConfig(BaseSettings):

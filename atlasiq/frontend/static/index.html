@@ -607,11 +607,34 @@
                 <div id="nvidia-config" class="hidden space-y-4">
                     <div>
                         <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">Model</label>
-                        <input type="text" id="nvidia-model" value="meta/llama-3.1-405b-instruct" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
+                        <select id="nvidia-model" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none">
+                            <optgroup label="Latest Free Models (2026)">
+                                <option value="deepseek-ai/deepseek-v4-pro">DeepSeek V4 Pro</option>
+                                <option value="moonshotai/kimi-k2.6">Moonshot Kimi K2.6</option>
+                            </optgroup>
+                            <optgroup label="Free Models">
+                                <option value="deepseek/deepseek-r1">DeepSeek R1</option>
+                                <option value="zhipuai/glm-4-plus">GLM-4-Plus</option>
+                                <option value="moonshot/moonshot-v1-128k">Moonshot Kimi K1.5</option>
+                            </optgroup>
+                            <optgroup label="Premium Models">
+                                <option value="nvidia/llama-3.1-nemotron-70b-instruct">Llama 3.1 Nemotron 70B</option>
+                                <option value="meta/llama-3.1-405b-instruct">Llama 3.1 405B Instruct</option>
+                                <option value="meta/llama-3.1-70b-instruct">Llama 3.1 70B Instruct</option>
+                                <option value="meta/llama-3.1-8b-instruct">Llama 3.1 8B Instruct</option>
+                            </optgroup>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-[12px] font-['JetBrains_Mono'] text-on-surface-variant uppercase tracking-wide mb-2">API Key</label>
-                        <input type="password" id="nvidia-key" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none" placeholder="nvapi-xxx">
+                        <div id="nvidia-key-status" class="mb-2 hidden">
+                            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 border border-success/20">
+                                <span class="material-symbols-outlined text-success text-[16px]">check_circle</span>
+                                <span class="text-[12px] text-success font-['JetBrains_Mono']">API key configured in .env</span>
+                            </div>
+                        </div>
+                        <input type="password" id="nvidia-key" class="w-full bg-surface-container-high border border-white/10 rounded-lg px-4 py-3 text-on-surface focus:border-white/30 focus:outline-none" placeholder="nvapi-xxx (optional if configured in .env)">
+                        <p class="text-[10px] text-on-surface-variant/60 mt-2 font-['JetBrains_Mono']">Leave empty to use API key from .env file</p>
                     </div>
                 </div>
                 
@@ -1692,7 +1715,7 @@
     });
     
     // Modal functionality
-    navCollections.addEventListener('click', (e) => {
+    navCollections.addEventListener('click', async (e) => {
         e.preventDefault();
         modelModal.classList.remove('hidden');
         
@@ -1700,11 +1723,41 @@
         llmProviderSelect.value = llmConfig.provider;
         updateProviderConfig(llmConfig.provider);
         
+        // Check if API keys are configured in .env
+        try {
+            const response = await fetch(`${API_BASE_URL}/config/check`);
+            if (response.ok) {
+                const configStatus = await response.json();
+                
+                // Show status for NVIDIA API key
+                const nvidiaKeyStatus = document.getElementById('nvidia-key-status');
+                if (configStatus.nvidia_api_key_configured) {
+                    nvidiaKeyStatus.classList.remove('hidden');
+                    // Clear the input field if API key is already configured
+                    document.getElementById('nvidia-key').value = '';
+                } else {
+                    nvidiaKeyStatus.classList.add('hidden');
+                }
+                
+                // Update current provider and model if set
+                if (configStatus.current_provider) {
+                    llmProviderSelect.value = configStatus.current_provider;
+                    llmConfig.provider = configStatus.current_provider;
+                }
+                if (configStatus.current_model) {
+                    llmConfig.model = configStatus.current_model;
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to check config status:', error);
+        }
+        
         if (llmConfig.provider === 'ollama') {
             document.getElementById('ollama-model').value = llmConfig.model;
             document.getElementById('ollama-url').value = llmConfig.baseUrl;
         } else if (llmConfig.provider === 'nvidia') {
             document.getElementById('nvidia-model').value = llmConfig.model;
+            // Only set API key if user has one saved in localStorage
             if (llmConfig.apiKey) document.getElementById('nvidia-key').value = llmConfig.apiKey;
         } else if (llmConfig.provider === 'openai') {
             document.getElementById('openai-model').value = llmConfig.model;
@@ -1756,13 +1809,13 @@
             apiKey = null;
         } else if (provider === 'nvidia') {
             model = document.getElementById('nvidia-model').value;
-            apiKey = document.getElementById('nvidia-key').value;
+            apiKey = document.getElementById('nvidia-key').value || null; // Allow empty (uses .env)
         } else if (provider === 'openai') {
             model = document.getElementById('openai-model').value;
-            apiKey = document.getElementById('openai-key').value;
+            apiKey = document.getElementById('openai-key').value || null;
         } else if (provider === 'anthropic') {
             model = document.getElementById('anthropic-model').value;
-            apiKey = document.getElementById('anthropic-key').value;
+            apiKey = document.getElementById('anthropic-key').value || null;
         }
         
         llmConfig = { provider, model, apiKey, baseUrl };
@@ -1771,7 +1824,8 @@
         modelModal.classList.add('hidden');
         
         // Show success notification
-        alert(`✓ Model settings saved: ${provider} - ${model}`);
+        const apiKeyStatus = apiKey ? 'with custom API key' : 'using .env configuration';
+        showNotification(`Model settings saved: ${provider} - ${model} (${apiKeyStatus})`, 'success');
     });
     
     // Micro-interactions
